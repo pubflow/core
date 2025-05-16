@@ -1,6 +1,6 @@
 {
   "name": "@pubflow/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Core functionality for Pubflow framework",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -31,5 +31,16 @@
   },
   "peerDependencies": {
     "zod": "^3.x"
-  }
+  },
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pubflow/core.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pubflow/core/issues"
+  },
+  "homepage": "https://github.com/pubflow/core#readme"
 }

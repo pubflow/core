@@ -156,7 +156,3 @@ if (!result.success) {
   console.error(result.errors);
 }
 ```
-
-## License
-
-MIT

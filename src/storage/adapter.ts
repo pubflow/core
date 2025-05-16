@@ -1,6 +1,6 @@
 /**
  * Storage Adapter Interface
- * 
+ *
  * Defines the interface for storage adapters used by Pubflow
  */
 
@@ -10,23 +10,23 @@
 export interface StorageAdapter {
   /**
    * Get a value from storage
-   * 
+   *
    * @param key The key to retrieve
    * @returns The stored value, or null if not found
    */
   getItem(key: string): Promise<string | null>;
-  
+
   /**
    * Save a value to storage
-   * 
+   *
    * @param key The key to store under
    * @param value The value to store
    */
   setItem(key: string, value: string): Promise<void>;
-  
+
   /**
    * Remove a value from storage
-   * 
+   *
    * @param key The key to remove
    */
   removeItem(key: string): Promise<void>;
@@ -37,36 +37,36 @@ export interface StorageAdapter {
  */
 export class MemoryStorageAdapter implements StorageAdapter {
   private storage: Map<string, string> = new Map();
-  
+
   /**
    * Get a value from memory storage
-   * 
+   *
    * @param key The key to retrieve
    * @returns The stored value, or null if not found
    */
   async getItem(key: string): Promise<string | null> {
     return this.storage.get(key) || null;
   }
-  
+
   /**
    * Save a value to memory storage
-   * 
+   *
    * @param key The key to store under
    * @param value The value to store
    */
   async setItem(key: string, value: string): Promise<void> {
     this.storage.set(key, value);
   }
-  
+
   /**
    * Remove a value from memory storage
-   * 
+   *
    * @param key The key to remove
    */
   async removeItem(key: string): Promise<void> {
     this.storage.delete(key);
   }
-  
+
   /**
    * Clear all values from memory storage
    */
@@ -77,7 +77,7 @@ export class MemoryStorageAdapter implements StorageAdapter {
 
 /**
  * Create a storage key with prefix and instance ID
- * 
+ *
  * @param baseKey The base key
  * @param prefix Optional prefix
  * @param instanceId Optional instance ID
@@ -85,16 +85,22 @@ export class MemoryStorageAdapter implements StorageAdapter {
  */
 export function createStorageKey(baseKey: string, prefix?: string, instanceId?: string): string {
   const parts: string[] = [];
-  
+
   if (prefix) {
-    parts.push(prefix);
+    // Check if baseKey already starts with the prefix to prevent duplication
+    if (!baseKey.startsWith(`${prefix}_`)) {
+      parts.push(prefix);
+    }
   }
-  
+
   if (instanceId && instanceId !== 'default') {
-    parts.push(instanceId);
+    // Check if baseKey already contains the instance ID to prevent duplication
+    if (!baseKey.includes(`${instanceId}_`)) {
+      parts.push(instanceId);
+    }
   }
-  
+
   parts.push(baseKey);
-  
+
   return parts.join('_');
 }
