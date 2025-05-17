@@ -4,7 +4,7 @@
  * Types for authentication service
  */
 
-import { User } from '../types';
+import { User, SessionConfig } from '../types';
 
 /**
  * Login credentials
@@ -16,7 +16,7 @@ export interface LoginCredentials {
   email?: string;
   
   /**
-   * User username (alternative to email)
+   * User name
    */
   userName?: string;
   
@@ -27,7 +27,7 @@ export interface LoginCredentials {
 }
 
 /**
- * Result of a login operation
+ * Result of a login attempt
  */
 export interface LoginResult {
   /**
@@ -49,11 +49,6 @@ export interface LoginResult {
    * Error message (only present if success is false)
    */
   error?: string;
-  
-  /**
-   * Additional message
-   */
-  message?: string;
 }
 
 /**
@@ -99,6 +94,11 @@ export interface SessionRefreshResult {
    * When the session expires (ISO date string)
    */
   expiresAt?: string;
+  
+  /**
+   * Updated user data (only present if success is true)
+   */
+  user?: User;
   
   /**
    * Error message (only present if success is false)
@@ -209,4 +209,89 @@ export interface PasswordResetData {
    * New password
    */
   password: string;
+}
+
+/**
+ * Authentication response
+ */
+export interface AuthResponse {
+  /**
+   * Whether the operation was successful
+   */
+  success: boolean;
+
+  /**
+   * User data
+   */
+  user?: User;
+
+  /**
+   * Session ID
+   */
+  sessionId?: string;
+
+  /**
+   * Error message
+   */
+  error?: string;
+}
+
+/**
+ * Session response
+ */
+export interface SessionResponse {
+  /**
+   * Whether the operation was successful
+   */
+  success: boolean;
+
+  /**
+   * Session ID
+   */
+  sessionId?: string;
+
+  /**
+   * Error message
+   */
+  error?: string;
+}
+
+/**
+ * Session validation response
+ */
+export interface ValidationResponse {
+  /**
+   * Whether the session is valid
+   */
+  isValid: boolean;
+
+  /**
+   * User data
+   */
+  user?: User;
+
+  /**
+   * Error message
+   */
+  error?: string;
+}
+
+/**
+ * Session refresh response
+ */
+export interface RefreshResponse {
+  /**
+   * Whether the operation was successful
+   */
+  success: boolean;
+
+  /**
+   * New session ID
+   */
+  sessionId?: string;
+
+  /**
+   * Error message
+   */
+  error?: string;
 }

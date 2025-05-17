@@ -342,10 +342,10 @@ export class BridgeApiService<T extends EntityData> {
    */
   private createDefaultMeta(params?: QueryParams): PaginationMeta {
     return {
-      page: params?.page || 1,
-      limit: params?.limit || 10,
-      total: 0,
-      hasMore: false
+      currentPage: params?.page || 1,
+      totalPages: 1,
+      totalItems: 0,
+      perPage: params?.perPage || 10
     };
   }
 }

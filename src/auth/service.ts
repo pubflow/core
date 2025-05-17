@@ -5,7 +5,7 @@
  */
 
 import { ApiClient } from '../api/client';
-import { StorageAdapter, createStorageKey } from '../storage/adapter';
+import { StorageAdapter } from '../storage/adapter';
 import { PubflowInstanceConfig } from '../types';
 import { User } from '../types';
 import {
@@ -19,6 +19,8 @@ import {
   PasswordResetData
 } from './types';
 
+const DEBUG_AUTH = true && process.env.NODE_ENV === 'development';
+
 /**
  * Authentication Service
  */
@@ -26,6 +28,9 @@ export class AuthService {
   private apiClient: ApiClient;
   private storage: StorageAdapter;
   private config: PubflowInstanceConfig;
+  private validationInProgress: boolean = false;
+  private lastValidationTime: number = 0;
+  private validationInterval: number;
 
   // Storage keys
   private sessionKey: string;
@@ -42,19 +47,11 @@ export class AuthService {
     this.apiClient = apiClient;
     this.storage = storage;
     this.config = config;
+    this.validationInterval = config.sessionConfig?.validationInterval || 60 * 60 * 1000; // Default 1 hour
 
-    // Initialize storage keys with proper prefixes
-    this.sessionKey = createStorageKey(
-      config.storageConfig?.sessionKey || 'session_id',
-      config.storageConfig?.prefix,
-      config.id
-    );
-
-    this.userKey = createStorageKey(
-      'user_data',
-      config.storageConfig?.prefix,
-      config.id
-    );
+    // Initialize storage keys
+    this.sessionKey = config.storageConfig?.sessionKey || 'session_id';
+    this.userKey = 'user_data';
   }
 
   /**
@@ -64,29 +61,31 @@ export class AuthService {
    * @returns Login result
    */
   async login(credentials: LoginCredentials): Promise<LoginResult> {
+    if (DEBUG_AUTH) {
+      console.log('AuthService.login: Starting login process');
+    }
+
     try {
-      const endpoint = `${this.config.authBasePath || '/auth'}/login`;
-      const response = await this.apiClient.post<LoginResult>(endpoint, credentials, {
-        includeSession: false // Don't include session for login request
-      });
+      const endpoint = `${this.config.authBasePath || '/auth'}${this.config.sessionConfig?.loginEndpoint || '/login'}`;
+      const response = await this.apiClient.post<LoginResult>(endpoint, credentials);
 
       if (response.success && response.data) {
-        const { sessionId, user } = response.data;
+        if (DEBUG_AUTH) {
+          console.log('AuthService.login: Login successful, storing session data');
+        }
 
         // Store session ID and user data
-        if (sessionId) {
-          await this.storage.setItem(this.sessionKey, sessionId);
+        if (response.data.sessionId) {
+          await this.storage.setItem(this.sessionKey, response.data.sessionId);
         }
-
-        if (user) {
-          await this.storage.setItem(this.userKey, JSON.stringify(user));
+        if (response.data.user) {
+          await this.storage.setItem(this.userKey, JSON.stringify(response.data.user));
         }
+        return response.data;
+      }
 
-        return {
-          success: true,
-          user,
-          sessionId
-        };
+      if (DEBUG_AUTH) {
+        console.log('AuthService.login: Login failed:', response.error);
       }
 
       return {
@@ -94,6 +93,9 @@ export class AuthService {
         error: response.error || 'Login failed'
       };
     } catch (error: any) {
+      if (DEBUG_AUTH) {
+        console.error('AuthService.login: Error during login:', error);
+      }
       return {
         success: false,
         error: error.message || 'Login failed'
@@ -103,30 +105,22 @@ export class AuthService {
 
   /**
    * Logout current user
-   *
-   * @returns Operation result
    */
-  async logout(): Promise<{ success: boolean; error?: string }> {
+  async logout(): Promise<void> {
+    if (DEBUG_AUTH) {
+      console.log('AuthService.logout: Starting logout process');
+    }
+
     try {
-      const endpoint = `${this.config.authBasePath || '/auth'}/logout`;
-      const response = await this.apiClient.post(endpoint);
-
-      // Clear session data regardless of response
-      await this.storage.removeItem(this.sessionKey);
-      await this.storage.removeItem(this.userKey);
-
-      return {
-        success: true
-      };
-    } catch (error: any) {
-      // Still clear session data on error
-      await this.storage.removeItem(this.sessionKey);
-      await this.storage.removeItem(this.userKey);
-
-      return {
-        success: false,
-        error: error.message || 'Logout failed'
-      };
+      const endpoint = `${this.config.authBasePath || '/auth'}${this.config.sessionConfig?.logoutEndpoint || '/logout'}`;
+      await this.apiClient.post(endpoint);
+    } catch (error) {
+      if (DEBUG_AUTH) {
+        console.error('AuthService.logout: Error during logout:', error);
+      }
+    } finally {
+      // Always clear session data, even if API call fails
+      await this.clearSessionData();
     }
   }
 
@@ -136,10 +130,44 @@ export class AuthService {
    * @returns Session validation result
    */
   async validateSession(): Promise<SessionValidationResult> {
+    // Prevent concurrent validations
+    if (this.validationInProgress) {
+      if (DEBUG_AUTH) {
+        console.log('AuthService.validateSession: Validation already in progress');
+      }
+      return {
+        isValid: false,
+        error: 'Session validation already in progress'
+      };
+    }
+
+    // Check if we need to validate based on interval
+    const now = Date.now();
+    if (now - this.lastValidationTime < this.validationInterval) {
+      if (DEBUG_AUTH) {
+        console.log('AuthService.validateSession: Skipping validation, too soon');
+      }
+      const currentUser = await this.getCurrentUser();
+      return {
+        isValid: true,
+        user: currentUser || undefined
+      };
+    }
+
+    this.validationInProgress = true;
+    this.lastValidationTime = now;
+
+    if (DEBUG_AUTH) {
+      console.log('AuthService.validateSession: Starting session validation');
+    }
+
     try {
       const sessionId = await this.storage.getItem(this.sessionKey);
 
       if (!sessionId) {
+        if (DEBUG_AUTH) {
+          console.log('AuthService.validateSession: No session found');
+        }
         return {
           isValid: false,
           error: 'No session found'
@@ -150,9 +178,16 @@ export class AuthService {
       const response = await this.apiClient.get<SessionValidationResult>(endpoint);
 
       if (response.success && response.data) {
-        // Update user data if provided
+        if (DEBUG_AUTH) {
+          console.log('AuthService.validateSession: Session is valid');
+        }
+
+        // Update user data if provided and different from current
         if (response.data.user) {
-          await this.storage.setItem(this.userKey, JSON.stringify(response.data.user));
+          const currentUser = await this.getCurrentUser();
+          if (!currentUser || JSON.stringify(currentUser) !== JSON.stringify(response.data.user)) {
+            await this.storage.setItem(this.userKey, JSON.stringify(response.data.user));
+          }
         }
 
         return {
@@ -162,41 +197,89 @@ export class AuthService {
         };
       }
 
-      // Session is invalid, clear data
-      await this.storage.removeItem(this.sessionKey);
-      await this.storage.removeItem(this.userKey);
+      // Only clear session if server explicitly indicates it's invalid
+      if (response.error === 'Invalid session' || response.error === 'Session expired') {
+        if (DEBUG_AUTH) {
+          console.log('AuthService.validateSession: Session is invalid, clearing data');
+        }
+        await this.clearSessionData();
+      }
 
       return {
         isValid: false,
         error: response.error || 'Session validation failed'
       };
     } catch (error: any) {
+      if (DEBUG_AUTH) {
+        console.error('AuthService.validateSession: Error during validation:', error);
+      }
+      // Don't clear session on network or other errors
       return {
         isValid: false,
         error: error.message || 'Session validation failed'
       };
+    } finally {
+      this.validationInProgress = false;
     }
   }
 
   /**
-   * Refresh current session
+   * Clear session data from storage
+   * This method centralizes the session cleanup logic
+   */
+  private async clearSessionData(): Promise<void> {
+    if (DEBUG_AUTH) {
+      console.log('AuthService.clearSessionData: Clearing session data');
+    }
+
+    try {
+      await this.storage.removeItem(this.sessionKey);
+      await this.storage.removeItem(this.userKey);
+    } catch (error) {
+      if (DEBUG_AUTH) {
+        console.error('AuthService.clearSessionData: Error clearing session data:', error);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get current user
+   *
+   * @returns Current user or null
+   */
+  async getCurrentUser(): Promise<User | null> {
+    try {
+      const userData = await this.storage.getItem(this.userKey);
+      if (!userData) return null;
+
+      return JSON.parse(userData);
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Refresh session
    *
    * @returns Session refresh result
    */
   async refreshSession(): Promise<SessionRefreshResult> {
     try {
-      const endpoint = `${this.config.authBasePath || '/auth'}/refresh`;
+      const endpoint = `${this.config.authBasePath || '/auth'}${this.config.sessionConfig?.refreshEndpoint || '/refresh-session'}`;
       const response = await this.apiClient.post<SessionRefreshResult>(endpoint);
 
-      if (response.success && response.data && response.data.sessionId) {
-        // Update session ID
-        await this.storage.setItem(this.sessionKey, response.data.sessionId);
-
-        return {
-          success: true,
-          sessionId: response.data.sessionId,
-          expiresAt: response.data.expiresAt
-        };
+      if (response.success && response.data) {
+        // Update session ID if provided
+        if (response.data.sessionId) {
+          await this.storage.setItem(this.sessionKey, response.data.sessionId);
+        }
+        // Update user data if provided
+        if (response.data.user) {
+          await this.storage.setItem(this.userKey, JSON.stringify(response.data.user));
+        }
+        return response.data;
       }
 
       return {
@@ -204,40 +287,11 @@ export class AuthService {
         error: response.error || 'Session refresh failed'
       };
     } catch (error: any) {
+      console.error('Session refresh error:', error);
       return {
         success: false,
         error: error.message || 'Session refresh failed'
       };
-    }
-  }
-
-  /**
-   * Get current user
-   *
-   * @returns Current user or null if not authenticated
-   */
-  async getCurrentUser(): Promise<User | null> {
-    try {
-      // First try to get from storage
-      const userData = await this.storage.getItem(this.userKey);
-
-      if (userData) {
-        return JSON.parse(userData);
-      }
-
-      // If not in storage, try to get from API
-      const endpoint = `${this.config.authBasePath || '/auth'}/me`;
-      const response = await this.apiClient.get<User>(endpoint);
-
-      if (response.success && response.data) {
-        // Store user data
-        await this.storage.setItem(this.userKey, JSON.stringify(response.data));
-        return response.data;
-      }
-
-      return null;
-    } catch (error) {
-      return null;
     }
   }
 

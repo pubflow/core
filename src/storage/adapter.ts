@@ -102,5 +102,14 @@ export function createStorageKey(baseKey: string, prefix?: string, instanceId?: 
 
   parts.push(baseKey);
 
-  return parts.join('_');
+  const result = parts.join('_');
+
+  // Log para depuración solo si está en modo de desarrollo y no es una clave común
+  if (process.env.NODE_ENV === 'development' &&
+      !['session_id', 'user_data'].includes(baseKey) &&
+      Math.random() < 0.01) { // Solo log 1% de las veces para reducir ruido
+    console.log(`createStorageKey: baseKey=${baseKey}, prefix=${prefix}, result=${result}`);
+  }
+
+  return result;
 }

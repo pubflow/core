@@ -10,7 +10,6 @@ export * from './api/types';
 
 // Export Auth
 export * from './auth/service';
-export * from './auth/types';
 
 // Export Bridge
 export * from './bridge/service';
@@ -25,8 +24,33 @@ export * from './schema/validator';
 // Export Storage
 export * from './storage/adapter';
 
-// Export Types
-export * from './types';
+// Export core types
+export type {
+  User,
+  SessionConfig,
+  StorageConfig,
+  PubflowInstanceConfig,
+  PaginationMeta
+} from './types';
 
-// Export Utils
-export * from './utils/helpers';
+// Export auth types
+export type {
+  LoginCredentials,
+  LoginResult,
+  SessionValidationResult,
+  SessionRefreshResult,
+  RegistrationData,
+  RegistrationResult,
+  PasswordResetRequestData,
+  PasswordResetData,
+  AuthResponse,
+  SessionResponse,
+  ValidationResponse,
+  RefreshResponse
+} from './auth/types';
+
+// Export API client
+export { ApiClient } from './api/client';
+
+// Export storage adapter
+export { StorageAdapter } from './storage/adapter';

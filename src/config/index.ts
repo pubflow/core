@@ -4,53 +4,55 @@
  * Provides configuration management for Pubflow framework
  */
 
-import { SessionConfig, StorageConfig, PubflowInstanceConfig } from '../types';
+import { PubflowInstanceConfig, SessionConfig } from '../types';
 
-export interface PubflowConfig {
-  /** Base URL for the API */
-  baseUrl: string;
+const defaultSessionConfig: SessionConfig = {
+  basePath: '/auth',
+  loginEndpoint: '/login',
+  logoutEndpoint: '/logout',
+  validationEndpoint: '/validate',
+  refreshEndpoint: '/refresh',
+  storageKey: 'session',
+  autoValidate: true,
+  validationInterval: 5 * 60 * 1000 // 5 minutes
+};
 
-  /** Custom base path for bridge API (default: '/bridge') */
-  bridgeBasePath?: string;
-
-  /** Custom base path for auth API (default: '/auth') */
-  authBasePath?: string;
-
-  /** Default timeout for API requests in milliseconds */
-  timeout?: number;
-
-  /** Whether to use secure storage for session tokens (if available) */
-  useSecureStorage?: boolean;
-
-  /** Session configuration */
-  sessionConfig?: SessionConfig;
-
-  /** Storage configuration */
-  storageConfig?: StorageConfig;
-
-  /** Custom headers to include in all API requests */
-  headers?: Record<string, string>;
-}
-
-// Default configuration values
-export const DEFAULT_CONFIG: Omit<PubflowConfig, 'baseUrl'> = {
-  bridgeBasePath: '/bridge',
+const defaultConfig: PubflowInstanceConfig = {
+  id: 'default',
+  baseUrl: 'http://localhost:3000',
   authBasePath: '/auth',
-  timeout: 30000, // 30 seconds
-  useSecureStorage: true,
-  sessionConfig: {
-    validationInterval: 5 * 60 * 1000, // 5 minutes
-    validationEndpoint: '/validate-session',
-    autoValidate: true,
-    validateOnStartup: true,
-    validateBeforeRequests: false,
-    refreshThreshold: 5 * 60 * 1000, // 5 minutes
-  },
+  sessionConfig: defaultSessionConfig,
   storageConfig: {
     prefix: 'pubflow',
-    sessionKey: 'session_id'
+    sessionKey: 'session',
+    userKey: 'user'
   },
-  headers: {}
+  useSecureStorage: false,
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  timeout: 30000
+};
+
+export const createConfig = (config: Partial<PubflowInstanceConfig> = {}): PubflowInstanceConfig => {
+  const existingConfig = { ...defaultConfig };
+  
+  return {
+    ...existingConfig,
+    ...config,
+    sessionConfig: {
+      ...existingConfig.sessionConfig,
+      ...config.sessionConfig
+    },
+    storageConfig: {
+      ...existingConfig.storageConfig,
+      ...config.storageConfig
+    },
+    headers: {
+      ...existingConfig.headers,
+      ...config.headers
+    }
+  };
 };
 
 // Store for multiple configurations
@@ -66,23 +68,23 @@ const DEFAULT_INSTANCE_ID = 'default';
  * @param instanceId Optional instance ID (default: 'default')
  * @returns The complete configuration
  */
-export function initConfig(config: PubflowConfig, instanceId: string = DEFAULT_INSTANCE_ID): PubflowInstanceConfig {
+export function initConfig(config: PubflowInstanceConfig, instanceId: string = DEFAULT_INSTANCE_ID): PubflowInstanceConfig {
   // Merge with default config
   const fullConfig: PubflowInstanceConfig = {
-    ...DEFAULT_CONFIG,
+    ...defaultConfig,
     ...config,
     id: instanceId,
     // Merge nested objects
     sessionConfig: {
-      ...DEFAULT_CONFIG.sessionConfig,
+      ...defaultConfig.sessionConfig,
       ...config.sessionConfig
     },
     storageConfig: {
-      ...DEFAULT_CONFIG.storageConfig,
+      ...defaultConfig.storageConfig,
       ...config.storageConfig
     },
     headers: {
-      ...DEFAULT_CONFIG.headers,
+      ...defaultConfig.headers,
       ...config.headers
     }
   };
@@ -147,7 +149,7 @@ export function removeConfig(instanceId: string): boolean {
  * @returns The updated configuration
  * @throws Error if configuration is not initialized
  */
-export function updateConfig(instanceId: string, config: Partial<PubflowConfig>): PubflowInstanceConfig {
+export function updateConfig(instanceId: string, config: Partial<PubflowInstanceConfig>): PubflowInstanceConfig {
   const existingConfig = getConfig(instanceId);
 
   // Merge with existing config
