@@ -1,6 +1,6 @@
 /**
  * Bridge API Types
- * 
+ *
  * Types for Bridge API service
  */
 
@@ -22,12 +22,12 @@ export interface EntityConfig {
    * Entity endpoint name
    */
   endpoint: string;
-  
+
   /**
    * Custom base path (overrides the global bridgeBasePath)
    */
   basePath?: string;
-  
+
   /**
    * Custom endpoints for this entity
    */
@@ -42,27 +42,27 @@ export interface QueryParams {
    * Page number (1-based)
    */
   page?: number;
-  
+
   /**
    * Number of items per page
    */
   limit?: number;
-  
+
   /**
    * Field to sort by
    */
   orderBy?: string;
-  
+
   /**
    * Sort direction
    */
   orderDir?: 'asc' | 'desc';
-  
+
   /**
    * Whether to use rows property in response
    */
   useRows?: boolean;
-  
+
   /**
    * Additional query parameters
    */
@@ -73,12 +73,12 @@ export interface QueryParams {
  * Filter operator for search queries
  */
 export enum FilterOperator {
-  EQUALS = 'equals',
-  NOT_EQUALS = 'not_equals',
+  EQUALS = 'eq',
+  NOT_EQUALS = 'neq',
   CONTAINS = 'contains',
-  NOT_CONTAINS = 'not_contains',
-  STARTS_WITH = 'starts_with',
-  ENDS_WITH = 'ends_with',
+  NOT_CONTAINS = 'ncontains',
+  STARTS_WITH = 'sw',
+  ENDS_WITH = 'ew',
   GREATER_THAN = 'gt',
   GREATER_THAN_OR_EQUALS = 'gte',
   LESS_THAN = 'lt',
@@ -97,12 +97,12 @@ export interface FilterDefinition {
    * Field to filter on
    */
   field: string;
-  
+
   /**
    * Filter operator
    */
   operator: FilterOperator | string;
-  
+
   /**
    * Filter value
    */
@@ -117,11 +117,16 @@ export interface SearchParams extends QueryParams {
    * Search term for full-text search
    */
   q?: string;
-  
+
   /**
    * Filters to apply
    */
   filters?: FilterDefinition[];
+
+  /**
+   * Entity name (used for raw fetch)
+   */
+  entity?: string;
 }
 
 /**
@@ -132,7 +137,7 @@ export interface PaginatedResponse<T> {
    * Response data
    */
   data: T[];
-  
+
   /**
    * Pagination metadata
    */

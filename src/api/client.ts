@@ -203,6 +203,42 @@ export class ApiClient {
   }
 
   /**
+   * Get the base URL
+   *
+   * @returns Base URL
+   */
+  getBaseUrl(): string {
+    return this.config.baseUrl;
+  }
+
+  /**
+   * Get the session ID
+   *
+   * @returns Session ID
+   */
+  async getSessionId(): Promise<string | null> {
+    const sessionKey = createStorageKey(
+      this.config.storageConfig?.sessionKey || 'session_id',
+      this.config.storageConfig?.prefix,
+      this.config.id
+    );
+
+    return await this.storage.getItem(sessionKey);
+  }
+
+  /**
+   * Get default headers
+   *
+   * @returns Default headers
+   */
+  getDefaultHeaders(): Record<string, string> {
+    return {
+      'Content-Type': 'application/json',
+      ...this.config.headers
+    };
+  }
+
+  /**
    * Parse response based on content type
    *
    * @param response Fetch response
