@@ -3,7 +3,7 @@
  */
 
 /**
- * User type
+ * User type - Extended to include all Flowless backend fields
  */
 export interface User {
   /**
@@ -17,9 +17,14 @@ export interface User {
   email: string;
 
   /**
-   * User name
+   * User first name
    */
   name: string;
+
+  /**
+   * User last name
+   */
+  lastName?: string;
 
   /**
    * User type
@@ -32,7 +37,47 @@ export interface User {
   picture?: string;
 
   /**
-   * Additional user data
+   * Username (unique identifier)
+   */
+  userName?: string;
+
+  /**
+   * Email verification status
+   */
+  isVerified?: boolean;
+
+  /**
+   * Phone number for SMS authentication
+   */
+  phone?: string;
+
+  /**
+   * Two-factor authentication enabled
+   */
+  twoFactor?: boolean;
+
+  /**
+   * User language preference (e.g., 'es', 'en', 'fr')
+   */
+  lang?: string;
+
+  /**
+   * Additional user metadata as JSON string
+   */
+  metadata?: string;
+
+  /**
+   * Account creation timestamp
+   */
+  createdAt?: string;
+
+  /**
+   * Last update timestamp
+   */
+  updatedAt?: string;
+
+  /**
+   * Additional user data for extensibility
    */
   [key: string]: any;
 }
