@@ -67,6 +67,12 @@ const result = await authService.login({
   password: 'password'
 });
 
+// Get current user (basic method)
+const user = await authService.getCurrentUser();
+
+// Get complete user data with all additional fields preserved
+const completeUserData = await authService.getUserData();
+
 // Validate session
 const { isValid } = await authService.validateSession();
 

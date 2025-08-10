@@ -78,6 +78,10 @@ export interface User {
 
   /**
    * Additional user data for extensibility
+   *
+   * This index signature allows for additional fields to be stored
+   * exactly as received from the backend without any transformation.
+   * All additional fields are preserved during serialization/deserialization.
    */
   [key: string]: any;
 }

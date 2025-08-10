@@ -79,7 +79,8 @@ export class AuthService {
           await this.storage.setItem(this.sessionKey, response.data.sessionId);
         }
         if (response.data.user) {
-          await this.storage.setItem(this.userKey, JSON.stringify(response.data.user));
+          // Store user data preserving ALL original fields exactly as received
+          await this.storeUserData(response.data.user);
         }
         return response.data;
       }
@@ -186,7 +187,7 @@ export class AuthService {
         if (response.data.user) {
           const currentUser = await this.getCurrentUser();
           if (!currentUser || JSON.stringify(currentUser) !== JSON.stringify(response.data.user)) {
-            await this.storage.setItem(this.userKey, JSON.stringify(response.data.user));
+            await this.storeUserData(response.data.user);
           }
         }
 
@@ -253,9 +254,44 @@ export class AuthService {
       const userData = await this.storage.getItem(this.userKey);
       if (!userData) return null;
 
-      return JSON.parse(userData);
+      // Parse and return user data preserving ALL original fields
+      const parsedUser = JSON.parse(userData);
+      return parsedUser;
     } catch (error) {
       console.error('Error getting current user:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Store user data preserving all additional fields exactly as received
+   *
+   * @param user User data to store
+   */
+  private async storeUserData(user: User): Promise<void> {
+    try {
+      // Store the complete user object without any field mapping or transformation
+      await this.storage.setItem(this.userKey, JSON.stringify(user));
+    } catch (error) {
+      console.error('Error storing user data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user data with all additional fields preserved
+   *
+   * @returns Complete user data or null
+   */
+  async getUserData(): Promise<User | null> {
+    try {
+      const userData = await this.storage.getItem(this.userKey);
+      if (!userData) return null;
+
+      // Return the complete user object with all additional fields
+      return JSON.parse(userData) as User;
+    } catch (error) {
+      console.error('Error getting user data:', error);
       return null;
     }
   }
@@ -277,7 +313,7 @@ export class AuthService {
         }
         // Update user data if provided
         if (response.data.user) {
-          await this.storage.setItem(this.userKey, JSON.stringify(response.data.user));
+          await this.storeUserData(response.data.user);
         }
         return response.data;
       }

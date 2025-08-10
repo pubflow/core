@@ -52,5 +52,8 @@ export type {
 // Export API client
 export { ApiClient } from './api/client';
 
+// Export auth service
+export { AuthService } from './auth/service';
+
 // Export storage adapter
 export { StorageAdapter } from './storage/adapter';
