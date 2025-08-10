@@ -10,7 +10,7 @@ const defaultSessionConfig: SessionConfig = {
   basePath: '/auth',
   loginEndpoint: '/login',
   logoutEndpoint: '/logout',
-  validationEndpoint: '/validate',
+  validationEndpoint: '/validation', // ✅ Corregido para coincidir con el backend
   refreshEndpoint: '/refresh',
   storageKey: 'session',
   autoValidate: true,
