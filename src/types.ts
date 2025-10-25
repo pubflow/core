@@ -4,6 +4,11 @@
 
 /**
  * User type - Extended to include all Flowless backend fields
+ *
+ * @version 0.3.0 - Added snake_case support for multi-flowless compatibility
+ *
+ * This interface supports BOTH camelCase and snake_case formats for backward compatibility.
+ * The backend (multi-flowless) sends snake_case by default, but this interface accepts both.
  */
 export interface User {
   /**
@@ -22,14 +27,24 @@ export interface User {
   name: string;
 
   /**
-   * User last name
+   * User last name (camelCase format - legacy)
    */
   lastName?: string;
 
   /**
-   * User type
+   * User last name (snake_case format - preferred)
+   */
+  last_name?: string;
+
+  /**
+   * User type (camelCase format - legacy)
    */
   userType: string;
+
+  /**
+   * User type (snake_case format - preferred)
+   */
+  user_type?: string;
 
   /**
    * User profile picture URL
@@ -37,14 +52,24 @@ export interface User {
   picture?: string;
 
   /**
-   * Username (unique identifier)
+   * Username (camelCase format - legacy)
    */
   userName?: string;
 
   /**
-   * Email verification status
+   * Username (snake_case format - preferred)
+   */
+  user_name?: string;
+
+  /**
+   * Email verification status (camelCase format - legacy)
    */
   isVerified?: boolean;
+
+  /**
+   * Email verification status (snake_case format - preferred)
+   */
+  is_verified?: boolean;
 
   /**
    * Phone number for SMS authentication
@@ -52,9 +77,14 @@ export interface User {
   phone?: string;
 
   /**
-   * Two-factor authentication enabled
+   * Two-factor authentication enabled (camelCase format - legacy)
    */
   twoFactor?: boolean;
+
+  /**
+   * Two-factor authentication enabled (snake_case format - preferred)
+   */
+  two_factor?: boolean;
 
   /**
    * User language preference (e.g., 'es', 'en', 'fr')
@@ -67,14 +97,24 @@ export interface User {
   metadata?: string;
 
   /**
-   * Account creation timestamp
+   * Account creation timestamp (camelCase format - legacy)
    */
   createdAt?: string;
 
   /**
-   * Last update timestamp
+   * Account creation timestamp (snake_case format - preferred)
+   */
+  created_at?: string;
+
+  /**
+   * Last update timestamp (camelCase format - legacy)
    */
   updatedAt?: string;
+
+  /**
+   * Last update timestamp (snake_case format - preferred)
+   */
+  updated_at?: string;
 
   /**
    * Additional user data for extensibility
