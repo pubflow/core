@@ -166,6 +166,11 @@ export interface SessionConfig {
   autoValidate?: boolean;
 
   /**
+   * Whether to validate session on startup (React Native)
+   */
+  validateOnStartup?: boolean;
+
+  /**
    * Session validation interval in milliseconds
    */
   validationInterval?: number;
@@ -248,25 +253,53 @@ export interface PubflowInstanceConfig {
 
 /**
  * Pagination metadata
+ *
+ * @version 0.3.1 - Made all fields optional for maximum flexibility
+ *
+ * Supports multiple naming conventions:
+ * - Standard: currentPage, totalPages, totalItems, perPage
+ * - Alternative: page, limit, total, hasMore (React Native compatibility)
+ *
+ * At least one set of fields should be provided.
  */
 export interface PaginationMeta {
   /**
-   * Current page number
+   * Current page number (standard format)
    */
-  currentPage: number;
+  currentPage?: number;
+
+  /**
+   * Current page number (alternative format - React Native)
+   */
+  page?: number;
 
   /**
    * Total number of pages
    */
-  totalPages: number;
+  totalPages?: number;
 
   /**
-   * Total number of items
+   * Total number of items (standard format)
    */
-  totalItems: number;
+  totalItems?: number;
 
   /**
-   * Number of items per page
+   * Total number of items (alternative format - React Native)
    */
-  perPage: number;
-} 
+  total?: number;
+
+  /**
+   * Number of items per page (standard format)
+   */
+  perPage?: number;
+
+  /**
+   * Number of items per page (alternative format - React Native)
+   */
+  limit?: number;
+
+  /**
+   * Whether there are more pages available (React Native)
+   */
+  hasMore?: boolean;
+}

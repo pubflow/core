@@ -33,6 +33,9 @@ export type {
   PaginationMeta
 } from './types';
 
+// Export PubflowConfig as alias for backward compatibility
+export type { PubflowInstanceConfig as PubflowConfig } from './types';
+
 // Export auth types
 export type {
   LoginCredentials,

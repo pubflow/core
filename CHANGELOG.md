@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2025-10-25
+
+### Added
+- Added `PubflowConfig` as type alias for `PubflowInstanceConfig` (backward compatibility)
+- Added `validateOnStartup` field to `SessionConfig` interface (React Native support)
+- Added alternative field names to `PaginationMeta` interface:
+  - `page` (alternative to `currentPage`)
+  - `limit` (alternative to `perPage`)
+  - `total` (alternative to `totalItems`)
+  - `hasMore` (React Native compatibility)
+
+### Changed
+- Made all `PaginationMeta` fields optional for maximum flexibility
+- Updated documentation to reflect both naming conventions
+
+### Fixed
+- Fixed TypeScript compilation errors in `@pubflow/react-native` package
+- Fixed missing exports for React Native compatibility
+
 ## [0.3.0] - 2025-10-25
 
 ### Added
