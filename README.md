@@ -2,6 +2,12 @@
 
 Core functionality for the Pubflow framework.
 
+## 📚 Documentation
+
+- **Flowless (Authentication Backend)**: [https://flowless.dev/](https://flowless.dev/)
+- **Flowfull Client Libraries**: [https://clients.flowfull.dev/](https://clients.flowfull.dev/)
+- **Bridge Payments**: [https://bridgepayments.dev/](https://bridgepayments.dev/)
+
 ## Overview
 
 `@pubflow/core` provides the foundation for the Pubflow framework, including:
@@ -10,6 +16,7 @@ Core functionality for the Pubflow framework.
 - API client for making authenticated HTTP requests
 - Authentication service for user management and session handling
 - Bridge API service for standardized CRUD operations
+- **Bridge Payment Client** for payment processing (NEW in v0.4.0)
 - Schema validation using Zod
 - Storage adapter interface for different storage mechanisms
 - Utility functions for common tasks
@@ -162,3 +169,40 @@ if (!result.success) {
   console.error(result.errors);
 }
 ```
+
+### Bridge Payments (NEW in v0.4.0)
+
+```typescript
+import { BridgePaymentClient } from '@pubflow/core';
+
+// Create payment client
+const paymentClient = new BridgePaymentClient({
+  baseUrl: 'https://payments.example.com',
+  storage: new LocalStorageAdapter() // Optional, defaults to MemoryStorage
+});
+
+// Create payment intent
+const intent = await paymentClient.createPaymentIntent({
+  total_cents: 2000, // $20.00
+  currency: 'USD',
+  description: 'Premium Subscription',
+  provider_id: 'stripe'
+});
+
+// List payment methods
+const methods = await paymentClient.listPaymentMethods();
+
+// Create subscription
+const subscription = await paymentClient.createSubscription({
+  plan_id: 'plan_premium_monthly',
+  payment_method_id: 'pm_123'
+});
+
+// Manage organizations (multi-tenant)
+const org = await paymentClient.createOrganization({
+  name: 'Acme Corp',
+  email: 'billing@acme.com'
+});
+```
+
+For complete payment integration examples, see the [Bridge Payments documentation](https://bridgepayments.dev/).

@@ -60,3 +60,7 @@ export { AuthService } from './auth/service';
 
 // Export storage adapter
 export { StorageAdapter } from './storage/adapter';
+
+// Export Bridge Payments
+export * from './payments';
+export { BridgePaymentClient } from './payments/client';
