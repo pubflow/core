@@ -38,6 +38,32 @@ export type {
   ConvertGuestToUserRequest,
   ConvertGuestToUserResponse,
   PaginationParams,
-  ListResponse
+  ListResponse,
+  // Billing Schedules
+  ScheduleType,
+  IntervalType,
+  BillingScheduleStatus,
+  BillingSchedule,
+  CreateBillingScheduleRequest,
+  UpdateBillingScheduleRequest,
+  BillingExecution,
+  // Account Balance
+  BalanceType,
+  BalanceStatus,
+  TransactionType,
+  AccountBalance,
+  CreateAccountBalanceRequest,
+  UpdateAccountBalanceRequest,
+  CreditBalanceRequest,
+  DebitBalanceRequest,
+  AccountTransaction,
+  // Cost Tracking
+  CostType,
+  ProductCost,
+  CreateProductCostRequest,
+  UpdateProductCostRequest,
+  OrderCost,
+  CreateOrderCostRequest,
+  TotalCostResponse
 } from './types';
 

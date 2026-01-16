@@ -463,3 +463,303 @@ export interface ListResponse<T> {
   };
 }
 
+// ============================================================================
+// BILLING SCHEDULES
+// ============================================================================
+
+/**
+ * Schedule type
+ */
+export type ScheduleType = 'subscription' | 'installment' | 'recurring_invoice' | 'custom';
+
+/**
+ * Interval type
+ */
+export type IntervalType = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+
+/**
+ * Billing schedule status
+ */
+export type BillingScheduleStatus = 'active' | 'paused' | 'completed' | 'failed' | 'canceled';
+
+/**
+ * Billing schedule response
+ */
+export interface BillingSchedule {
+  id: string;
+  user_id?: string;
+  organization_id?: string;
+  schedule_type: ScheduleType;
+  amount_cents: number;
+  currency: string;
+  interval_type: IntervalType;
+  interval_count: number;
+  next_billing_date: string;
+  end_date?: string;
+  max_occurrences?: number;
+  current_occurrence: number;
+  payment_method_id?: string;
+  account_balance_id?: string;
+  auto_charge: boolean;
+  send_invoice: boolean;
+  retry_on_failure: boolean;
+  max_retries: number;
+  status: BillingScheduleStatus;
+  last_billing_date?: string;
+  last_billing_status?: string;
+  description?: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Request to create a billing schedule
+ */
+export interface CreateBillingScheduleRequest {
+  user_id?: string;
+  organization_id?: string;
+  schedule_type: ScheduleType;
+  amount_cents: number;
+  currency?: string;
+  interval_type: IntervalType;
+  interval_count?: number;
+  next_billing_date: string;
+  end_date?: string;
+  max_occurrences?: number;
+  payment_method_id?: string;
+  account_balance_id?: string;
+  auto_charge?: boolean;
+  send_invoice?: boolean;
+  retry_on_failure?: boolean;
+  max_retries?: number;
+  description?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Request to update a billing schedule
+ */
+export interface UpdateBillingScheduleRequest {
+  amount_cents?: number;
+  next_billing_date?: string;
+  end_date?: string;
+  max_occurrences?: number;
+  payment_method_id?: string;
+  account_balance_id?: string;
+  auto_charge?: boolean;
+  send_invoice?: boolean;
+  retry_on_failure?: boolean;
+  max_retries?: number;
+  description?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Billing execution response
+ */
+export interface BillingExecution {
+  id: string;
+  billing_schedule_id: string;
+  execution_date: string;
+  amount_cents: number;
+  currency: string;
+  status: string;
+  payment_id?: string;
+  receipt_id?: string;
+  error_message?: string;
+  retry_count: number;
+  created_at: string;
+}
+
+// ============================================================================
+// ACCOUNT BALANCE
+// ============================================================================
+
+/**
+ * Balance type
+ */
+export type BalanceType = 'general' | 'credits' | 'promotional' | 'refund';
+
+/**
+ * Balance status
+ */
+export type BalanceStatus = 'active' | 'suspended' | 'expired' | 'closed';
+
+/**
+ * Transaction type
+ */
+export type TransactionType = 'credit' | 'debit' | 'transfer' | 'expiration' | 'adjustment';
+
+/**
+ * Account balance response
+ */
+export interface AccountBalance {
+  id: string;
+  user_id?: string;
+  organization_id?: string;
+  customer_id?: string;
+  balance_cents: number;
+  currency: string;
+  balance_type: BalanceType;
+  reference_code?: string;
+  status: BalanceStatus;
+  expires_at?: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Request to create an account balance
+ */
+export interface CreateAccountBalanceRequest {
+  user_id?: string;
+  organization_id?: string;
+  customer_id?: string;
+  balance_type?: BalanceType;
+  balance_cents?: number;
+  currency?: string;
+  reference_code?: string;
+  expires_at?: string;
+  status?: BalanceStatus;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Request to update an account balance
+ */
+export interface UpdateAccountBalanceRequest {
+  status?: BalanceStatus;
+  expires_at?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Request to credit a balance
+ */
+export interface CreditBalanceRequest {
+  amount_cents: number;
+  description?: string;
+  reference_code?: string;
+}
+
+/**
+ * Request to debit a balance
+ */
+export interface DebitBalanceRequest {
+  amount_cents: number;
+  description?: string;
+  allow_negative?: boolean;
+}
+
+/**
+ * Account transaction response
+ */
+export interface AccountTransaction {
+  id: string;
+  account_balance_id: string;
+  transaction_type: TransactionType;
+  amount_cents: number;
+  balance_before_cents: number;
+  balance_after_cents: number;
+  currency: string;
+  description?: string;
+  reference_code?: string;
+  status: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+}
+
+// ============================================================================
+// COST TRACKING
+// ============================================================================
+
+/**
+ * Cost type
+ */
+export type CostType = 'fixed' | 'per_unit' | 'per_hour' | 'percentage';
+
+/**
+ * Product cost response
+ */
+export interface ProductCost {
+  id: string;
+  product_id: string;
+  cost_type: CostType;
+  cost_cents: number;
+  currency: string;
+  effective_from: string;
+  effective_until?: string;
+  category?: string;
+  notes?: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Request to create a product cost
+ */
+export interface CreateProductCostRequest {
+  product_id: string;
+  cost_type: CostType;
+  cost_cents: number;
+  currency?: string;
+  effective_from?: string;
+  effective_until?: string;
+  category?: string;
+  notes?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Request to update a product cost
+ */
+export interface UpdateProductCostRequest {
+  cost_cents?: number;
+  effective_until?: string;
+  category?: string;
+  notes?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Order cost response
+ */
+export interface OrderCost {
+  id: string;
+  order_id: string;
+  cost_type: CostType;
+  cost_cents: number;
+  currency: string;
+  category?: string;
+  description?: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+}
+
+/**
+ * Request to create an order cost
+ */
+export interface CreateOrderCostRequest {
+  order_id: string;
+  cost_type: CostType;
+  cost_cents: number;
+  currency?: string;
+  category?: string;
+  description?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Total cost response
+ */
+export interface TotalCostResponse {
+  product_id?: string;
+  order_id?: string;
+  total_cost_cents: number;
+  total_cost_dollars: number;
+  calculated_at?: string;
+}
+

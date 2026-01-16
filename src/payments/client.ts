@@ -33,7 +33,26 @@ import {
   ConvertGuestToUserRequest,
   ConvertGuestToUserResponse,
   PaginationParams,
-  ListResponse
+  ListResponse,
+  // Billing Schedules
+  BillingSchedule,
+  CreateBillingScheduleRequest,
+  UpdateBillingScheduleRequest,
+  BillingExecution,
+  // Account Balance
+  AccountBalance,
+  CreateAccountBalanceRequest,
+  UpdateAccountBalanceRequest,
+  CreditBalanceRequest,
+  DebitBalanceRequest,
+  AccountTransaction,
+  // Cost Tracking
+  ProductCost,
+  CreateProductCostRequest,
+  UpdateProductCostRequest,
+  OrderCost,
+  CreateOrderCostRequest,
+  TotalCostResponse
 } from './types';
 
 /**
@@ -650,6 +669,438 @@ export class BridgePaymentClient {
     options?: PaymentRequestOptions
   ): Promise<ConvertGuestToUserResponse> {
     return this.request<ConvertGuestToUserResponse>('/guest/convert', 'POST', data, options);
+  }
+
+  // ============================================================================
+  // BILLING SCHEDULES
+  // ============================================================================
+
+  /**
+   * List my billing schedules
+   *
+   * @param params Pagination parameters
+   * @param options Request options
+   * @returns List of billing schedules
+   */
+  async listMySchedules(
+    params?: PaginationParams,
+    options?: PaymentRequestOptions
+  ): Promise<BillingSchedule[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.set('page', params.page.toString());
+    if (params?.limit) queryParams.set('limit', params.limit.toString());
+
+    const endpoint = `/billing-schedules/me${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return this.request<BillingSchedule[]>(endpoint, 'GET', undefined, options);
+  }
+
+  /**
+   * Get a billing schedule by ID
+   *
+   * @param id Schedule ID
+   * @param options Request options
+   * @returns Billing schedule
+   */
+  async getSchedule(id: string, options?: PaymentRequestOptions): Promise<BillingSchedule> {
+    return this.request<BillingSchedule>(`/billing-schedules/${id}`, 'GET', undefined, options);
+  }
+
+  /**
+   * Create a billing schedule
+   *
+   * @param data Schedule data
+   * @param options Request options
+   * @returns Created billing schedule
+   */
+  async createSchedule(
+    data: CreateBillingScheduleRequest,
+    options?: PaymentRequestOptions
+  ): Promise<BillingSchedule> {
+    return this.request<BillingSchedule>('/billing-schedules', 'POST', data, options);
+  }
+
+  /**
+   * Update a billing schedule
+   *
+   * @param id Schedule ID
+   * @param data Update data
+   * @param options Request options
+   * @returns Updated billing schedule
+   */
+  async updateSchedule(
+    id: string,
+    data: UpdateBillingScheduleRequest,
+    options?: PaymentRequestOptions
+  ): Promise<BillingSchedule> {
+    return this.request<BillingSchedule>(`/billing-schedules/${id}`, 'PUT', data, options);
+  }
+
+  /**
+   * Pause a billing schedule
+   *
+   * @param id Schedule ID
+   * @param options Request options
+   * @returns Updated billing schedule
+   */
+  async pauseSchedule(id: string, options?: PaymentRequestOptions): Promise<BillingSchedule> {
+    return this.request<BillingSchedule>(`/billing-schedules/${id}/pause`, 'POST', undefined, options);
+  }
+
+  /**
+   * Resume a billing schedule
+   *
+   * @param id Schedule ID
+   * @param options Request options
+   * @returns Updated billing schedule
+   */
+  async resumeSchedule(id: string, options?: PaymentRequestOptions): Promise<BillingSchedule> {
+    return this.request<BillingSchedule>(`/billing-schedules/${id}/resume`, 'POST', undefined, options);
+  }
+
+  /**
+   * Delete a billing schedule
+   *
+   * @param id Schedule ID
+   * @param options Request options
+   */
+  async deleteSchedule(id: string, options?: PaymentRequestOptions): Promise<void> {
+    await this.request<void>(`/billing-schedules/${id}`, 'DELETE', undefined, options);
+  }
+
+  /**
+   * Get execution history for a billing schedule
+   *
+   * @param id Schedule ID
+   * @param params Pagination parameters
+   * @param options Request options
+   * @returns List of billing executions
+   */
+  async getScheduleExecutions(
+    id: string,
+    params?: PaginationParams,
+    options?: PaymentRequestOptions
+  ): Promise<BillingExecution[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.set('page', params.page.toString());
+    if (params?.limit) queryParams.set('limit', params.limit.toString());
+
+    const endpoint = `/billing-schedules/${id}/executions${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return this.request<BillingExecution[]>(endpoint, 'GET', undefined, options);
+  }
+
+  // ============================================================================
+  // ACCOUNT BALANCE
+  // ============================================================================
+
+  /**
+   * List my account balances
+   *
+   * @param params Pagination parameters
+   * @param options Request options
+   * @returns List of account balances
+   */
+  async listMyBalances(
+    params?: PaginationParams,
+    options?: PaymentRequestOptions
+  ): Promise<AccountBalance[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.set('page', params.page.toString());
+    if (params?.limit) queryParams.set('limit', params.limit.toString());
+
+    const endpoint = `/account-balance/me/balances${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return this.request<AccountBalance[]>(endpoint, 'GET', undefined, options);
+  }
+
+  /**
+   * Get an account balance by ID
+   *
+   * @param id Balance ID
+   * @param options Request options
+   * @returns Account balance
+   */
+  async getBalance(id: string, options?: PaymentRequestOptions): Promise<AccountBalance> {
+    return this.request<AccountBalance>(`/account-balance/${id}`, 'GET', undefined, options);
+  }
+
+  /**
+   * Create an account balance
+   *
+   * @param data Balance data
+   * @param options Request options
+   * @returns Created account balance
+   */
+  async createBalance(
+    data: CreateAccountBalanceRequest,
+    options?: PaymentRequestOptions
+  ): Promise<AccountBalance> {
+    return this.request<AccountBalance>('/account-balance', 'POST', data, options);
+  }
+
+  /**
+   * Credit an account balance
+   *
+   * @param id Balance ID
+   * @param data Credit data
+   * @param options Request options
+   * @returns Updated balance and transaction
+   */
+  async creditBalance(
+    id: string,
+    data: CreditBalanceRequest,
+    options?: PaymentRequestOptions
+  ): Promise<{ balance: AccountBalance; transaction: AccountTransaction }> {
+    return this.request<{ balance: AccountBalance; transaction: AccountTransaction }>(
+      `/account-balance/${id}/credit`,
+      'POST',
+      data,
+      options
+    );
+  }
+
+  /**
+   * Debit an account balance
+   *
+   * @param id Balance ID
+   * @param data Debit data
+   * @param options Request options
+   * @returns Updated balance and transaction
+   */
+  async debitBalance(
+    id: string,
+    data: DebitBalanceRequest,
+    options?: PaymentRequestOptions
+  ): Promise<{ balance: AccountBalance; transaction: AccountTransaction }> {
+    return this.request<{ balance: AccountBalance; transaction: AccountTransaction }>(
+      `/account-balance/${id}/debit`,
+      'POST',
+      data,
+      options
+    );
+  }
+
+  /**
+   * Update an account balance
+   *
+   * @param id Balance ID
+   * @param data Update data
+   * @param options Request options
+   * @returns Updated account balance
+   */
+  async updateBalance(
+    id: string,
+    data: UpdateAccountBalanceRequest,
+    options?: PaymentRequestOptions
+  ): Promise<AccountBalance> {
+    return this.request<AccountBalance>(`/account-balance/${id}`, 'PUT', data, options);
+  }
+
+  /**
+   * Delete an account balance
+   *
+   * @param id Balance ID
+   * @param options Request options
+   */
+  async deleteBalance(id: string, options?: PaymentRequestOptions): Promise<void> {
+    await this.request<void>(`/account-balance/${id}`, 'DELETE', undefined, options);
+  }
+
+  /**
+   * List my account transactions
+   *
+   * @param params Pagination parameters
+   * @param options Request options
+   * @returns List of account transactions
+   */
+  async listMyTransactions(
+    params?: PaginationParams,
+    options?: PaymentRequestOptions
+  ): Promise<AccountTransaction[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.set('page', params.page.toString());
+    if (params?.limit) queryParams.set('limit', params.limit.toString());
+
+    const endpoint = `/account-balance/me/transactions${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return this.request<AccountTransaction[]>(endpoint, 'GET', undefined, options);
+  }
+
+  /**
+   * Get transactions for a specific balance
+   *
+   * @param id Balance ID
+   * @param params Pagination parameters
+   * @param options Request options
+   * @returns List of account transactions
+   */
+  async getBalanceTransactions(
+    id: string,
+    params?: PaginationParams,
+    options?: PaymentRequestOptions
+  ): Promise<AccountTransaction[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.set('page', params.page.toString());
+    if (params?.limit) queryParams.set('limit', params.limit.toString());
+
+    const endpoint = `/account-balance/${id}/transactions${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return this.request<AccountTransaction[]>(endpoint, 'GET', undefined, options);
+  }
+
+  // ============================================================================
+  // COST TRACKING
+  // ============================================================================
+
+  /**
+   * Get all costs for a product
+   *
+   * @param productId Product ID
+   * @param params Pagination parameters
+   * @param options Request options
+   * @returns List of product costs
+   */
+  async getProductCosts(
+    productId: string,
+    params?: PaginationParams,
+    options?: PaymentRequestOptions
+  ): Promise<ProductCost[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.set('page', params.page.toString());
+    if (params?.limit) queryParams.set('limit', params.limit.toString());
+
+    const endpoint = `/cost-tracking/products/${productId}/costs${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return this.request<ProductCost[]>(endpoint, 'GET', undefined, options);
+  }
+
+  /**
+   * Get active cost for a product
+   *
+   * @param productId Product ID
+   * @param date Date to check (ISO 8601)
+   * @param options Request options
+   * @returns Active product cost
+   */
+  async getActiveProductCost(
+    productId: string,
+    date?: string,
+    options?: PaymentRequestOptions
+  ): Promise<ProductCost> {
+    const queryParams = new URLSearchParams();
+    if (date) queryParams.set('date', date);
+
+    const endpoint = `/cost-tracking/products/${productId}/costs/active${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return this.request<ProductCost>(endpoint, 'GET', undefined, options);
+  }
+
+  /**
+   * Get total cost for a product
+   *
+   * @param productId Product ID
+   * @param date Date to check (ISO 8601)
+   * @param options Request options
+   * @returns Total cost response
+   */
+  async getTotalProductCost(
+    productId: string,
+    date?: string,
+    options?: PaymentRequestOptions
+  ): Promise<TotalCostResponse> {
+    const queryParams = new URLSearchParams();
+    if (date) queryParams.set('date', date);
+
+    const endpoint = `/cost-tracking/products/${productId}/costs/total${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return this.request<TotalCostResponse>(endpoint, 'GET', undefined, options);
+  }
+
+  /**
+   * Create a product cost
+   *
+   * @param data Product cost data
+   * @param options Request options
+   * @returns Created product cost
+   */
+  async createProductCost(
+    data: CreateProductCostRequest,
+    options?: PaymentRequestOptions
+  ): Promise<ProductCost> {
+    return this.request<ProductCost>('/cost-tracking/products/costs', 'POST', data, options);
+  }
+
+  /**
+   * Update a product cost
+   *
+   * @param id Cost ID
+   * @param data Update data
+   * @param options Request options
+   * @returns Updated product cost
+   */
+  async updateProductCost(
+    id: string,
+    data: UpdateProductCostRequest,
+    options?: PaymentRequestOptions
+  ): Promise<ProductCost> {
+    return this.request<ProductCost>(`/cost-tracking/products/costs/${id}`, 'PUT', data, options);
+  }
+
+  /**
+   * Delete a product cost
+   *
+   * @param id Cost ID
+   * @param options Request options
+   */
+  async deleteProductCost(id: string, options?: PaymentRequestOptions): Promise<void> {
+    await this.request<void>(`/cost-tracking/products/costs/${id}`, 'DELETE', undefined, options);
+  }
+
+  /**
+   * Get all costs for an order
+   *
+   * @param orderId Order ID
+   * @param params Pagination parameters
+   * @param options Request options
+   * @returns List of order costs
+   */
+  async getOrderCosts(
+    orderId: string,
+    params?: PaginationParams,
+    options?: PaymentRequestOptions
+  ): Promise<OrderCost[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.set('page', params.page.toString());
+    if (params?.limit) queryParams.set('limit', params.limit.toString());
+
+    const endpoint = `/cost-tracking/orders/${orderId}/costs${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return this.request<OrderCost[]>(endpoint, 'GET', undefined, options);
+  }
+
+  /**
+   * Get total cost for an order
+   *
+   * @param orderId Order ID
+   * @param options Request options
+   * @returns Total cost response
+   */
+  async getTotalOrderCost(
+    orderId: string,
+    options?: PaymentRequestOptions
+  ): Promise<TotalCostResponse> {
+    return this.request<TotalCostResponse>(
+      `/cost-tracking/orders/${orderId}/costs/total`,
+      'GET',
+      undefined,
+      options
+    );
+  }
+
+  /**
+   * Create an order cost
+   *
+   * @param data Order cost data
+   * @param options Request options
+   * @returns Created order cost
+   */
+  async createOrderCost(
+    data: CreateOrderCostRequest,
+    options?: PaymentRequestOptions
+  ): Promise<OrderCost> {
+    return this.request<OrderCost>('/cost-tracking/orders/costs', 'POST', data, options);
   }
 }
 
