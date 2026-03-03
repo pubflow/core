@@ -10,6 +10,7 @@ export * from './api/types';
 
 // Export Auth
 export * from './auth/service';
+export { TwoFactorService } from './auth/two-factor';
 
 // Export Bridge
 export * from './bridge/service';
@@ -49,7 +50,14 @@ export type {
   AuthResponse,
   SessionResponse,
   ValidationResponse,
-  RefreshResponse
+  RefreshResponse,
+  // 2FA types
+  TwoFactorMethod,
+  TwoFactorSystemInfo,
+  TwoFactorStartResult,
+  TwoFactorVerifyResult,
+  TwoFactorSetupResult,
+  TwoFactorToggleResult,
 } from './auth/types';
 
 // Export API client

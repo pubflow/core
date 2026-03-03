@@ -192,7 +192,7 @@ export interface UpdatePaymentMethodRequest {
 /**
  * Address type
  */
-export type AddressType = 'billing' | 'shipping';
+export type AddressType = 'billing' | 'shipping' | 'both';
 
 /**
  * Address response
@@ -211,6 +211,7 @@ export interface Address {
   postal_code: string;
   country: string;
   phone?: string;
+  email?: string;
   is_default: boolean;
   created_at: string;
   updated_at: string;
@@ -229,6 +230,7 @@ export interface CreateAddressRequest {
   postal_code: string;
   country: string;
   phone?: string;
+  email?: string;
   is_default?: boolean;
 }
 
