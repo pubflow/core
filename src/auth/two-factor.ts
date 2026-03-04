@@ -21,9 +21,13 @@ export class TwoFactorService {
     private apiClient: ApiClient;
     private basePath: string;
 
-    constructor(apiClient: ApiClient, config: PubflowInstanceConfig) {
+    constructor(apiClient: ApiClient, configOrBasePath: PubflowInstanceConfig | string) {
         this.apiClient = apiClient;
-        this.basePath = `${config.authBasePath || '/auth'}/two_factor`;
+        if (typeof configOrBasePath === 'string') {
+            this.basePath = configOrBasePath;
+        } else {
+            this.basePath = `${configOrBasePath.authBasePath || '/auth'}/two_factor`;
+        }
     }
 
     // ─── Public (no auth) ──────────────────────────────────────────────────────
