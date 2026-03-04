@@ -76,16 +76,24 @@ export class AuthService {
 
         const data = response.data as any;
 
-        // Normalize snake_case → camelCase for 2FA fields returned by the backend
-        // Backend: { requires_2fa, session_id, available_methods }
-        // Client expects: { requires2fa, sessionId, availableMethods }
+        // Normalize snake_case → camelCase for 2FA fields returned by the backend.
+        // Backend: { success:false, requires_2fa:true, session_id, available_methods, user }
         if (data.requires_2fa) {
           const partialSessionId = data.session_id ?? data.sessionId;
-          // ← CRITICAL: store the partial session so ApiClient can attach it
-          // to subsequent /auth/two_factor/:method/start calls.
+
+          // Store the partial session so ApiClient can attach it on
+          // subsequent /auth/two_factor/:method/start and /verify calls.
           if (partialSessionId) {
             await this.storage.setItem(this.sessionKey, partialSessionId);
           }
+
+          // The 2FA login response already includes safe user data.
+          // Store it now so getCurrentUser() returns the real user after OTP verify —
+          // no extra API call to /me or /validation needed.
+          if (data.user) {
+            await this.storeUserData(data.user);
+          }
+
           return {
             success: true,
             requires2fa: true,
@@ -94,7 +102,7 @@ export class AuthService {
           };
         }
 
-        // Normal login — store session ID and user data
+        // Normal (non-2FA) login — store session ID and user data
         if (data.session_id ?? data.sessionId) {
           await this.storage.setItem(this.sessionKey, data.session_id ?? data.sessionId);
         }
@@ -102,7 +110,6 @@ export class AuthService {
           await this.storeUserData(data.user);
         }
         return response.data;
-
       }
 
       if (DEBUG_AUTH) {
@@ -123,6 +130,7 @@ export class AuthService {
       };
     }
   }
+
 
   /**
    * Logout current user
