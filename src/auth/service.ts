@@ -80,10 +80,16 @@ export class AuthService {
         // Backend: { requires_2fa, session_id, available_methods }
         // Client expects: { requires2fa, sessionId, availableMethods }
         if (data.requires_2fa) {
+          const partialSessionId = data.session_id ?? data.sessionId;
+          // ← CRITICAL: store the partial session so ApiClient can attach it
+          // to subsequent /auth/two_factor/:method/start calls.
+          if (partialSessionId) {
+            await this.storage.setItem(this.sessionKey, partialSessionId);
+          }
           return {
             success: true,
             requires2fa: true,
-            sessionId: data.session_id ?? data.sessionId,
+            sessionId: partialSessionId,
             availableMethods: data.available_methods ?? data.availableMethods ?? [],
           };
         }
