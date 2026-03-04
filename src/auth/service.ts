@@ -74,15 +74,29 @@ export class AuthService {
           console.log('AuthService.login: Login successful, storing session data');
         }
 
-        // Store session ID and user data
-        if (response.data.sessionId) {
-          await this.storage.setItem(this.sessionKey, response.data.sessionId);
+        const data = response.data as any;
+
+        // Normalize snake_case → camelCase for 2FA fields returned by the backend
+        // Backend: { requires_2fa, session_id, available_methods }
+        // Client expects: { requires2fa, sessionId, availableMethods }
+        if (data.requires_2fa) {
+          return {
+            success: true,
+            requires2fa: true,
+            sessionId: data.session_id ?? data.sessionId,
+            availableMethods: data.available_methods ?? data.availableMethods ?? [],
+          };
         }
-        if (response.data.user) {
-          // Store user data preserving ALL original fields exactly as received
-          await this.storeUserData(response.data.user);
+
+        // Normal login — store session ID and user data
+        if (data.session_id ?? data.sessionId) {
+          await this.storage.setItem(this.sessionKey, data.session_id ?? data.sessionId);
+        }
+        if (data.user) {
+          await this.storeUserData(data.user);
         }
         return response.data;
+
       }
 
       if (DEBUG_AUTH) {
