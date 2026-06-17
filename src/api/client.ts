@@ -26,6 +26,34 @@ export class ApiClient {
     this.storage = storage;
   }
 
+  private getSessionStorageKeys(): string[] {
+    const configuredKey = this.config.storageConfig?.sessionKey || this.config.sessionConfig?.storageKey || 'session_id';
+    const prefixedConfiguredKey = createStorageKey(
+      configuredKey,
+      this.config.storageConfig?.prefix,
+      this.config.id
+    );
+
+    return Array.from(new Set([
+      configuredKey,
+      prefixedConfiguredKey,
+      'session_id',
+      'pubflow_session_id',
+      'pubflow_session',
+      'sessionId'
+    ]));
+  }
+
+  private async getStoredSessionId(): Promise<string | null> {
+    for (const key of this.getSessionStorageKeys()) {
+      const sessionId = await this.storage.getItem(key);
+      if (sessionId) {
+        return sessionId;
+      }
+    }
+    return null;
+  }
+
   /**
    * Make an HTTP request
    *
@@ -53,13 +81,7 @@ export class ApiClient {
 
       // Include session ID if available and requested
       if (includeSession) {
-        const sessionKey = createStorageKey(
-          this.config.storageConfig?.sessionKey || 'session_id',
-          this.config.storageConfig?.prefix,
-          this.config.id
-        );
-
-        const sessionId = await this.storage.getItem(sessionKey);
+        const sessionId = await this.getStoredSessionId();
         if (sessionId) {
           requestHeaders['X-Session-ID'] = sessionId;
         }
@@ -217,13 +239,7 @@ export class ApiClient {
    * @returns Session ID
    */
   async getSessionId(): Promise<string | null> {
-    const sessionKey = createStorageKey(
-      this.config.storageConfig?.sessionKey || 'session_id',
-      this.config.storageConfig?.prefix,
-      this.config.id
-    );
-
-    return await this.storage.getItem(sessionKey);
+    return await this.getStoredSessionId();
   }
 
   /**

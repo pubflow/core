@@ -50,8 +50,51 @@ export class AuthService {
     this.validationInterval = config.sessionConfig?.validationInterval || 60 * 60 * 1000; // Default 1 hour
 
     // Initialize storage keys
-    this.sessionKey = config.storageConfig?.sessionKey || 'session_id';
-    this.userKey = 'user_data';
+    this.sessionKey = config.storageConfig?.sessionKey || config.sessionConfig?.storageKey || 'session_id';
+    this.userKey = config.storageConfig?.userKey || 'user_data';
+  }
+
+  private getSessionIdFromResponse(data: any): string | undefined {
+    return data?.session_id ?? data?.sessionId;
+  }
+
+  private getRequiresTwoFactor(data: any): boolean {
+    return Boolean(data?.requires_2fa ?? data?.requires2fa);
+  }
+
+  private getAvailableTwoFactorMethods(data: any) {
+    return data?.available_methods ?? data?.availableMethods ?? [];
+  }
+
+  private async getFirstStoredValue(keys: string[]): Promise<string | null> {
+    for (const key of keys) {
+      const value = await this.storage.getItem(key);
+      if (value) return value;
+    }
+    return null;
+  }
+
+  private getSessionStorageKeys(): string[] {
+    return Array.from(new Set([
+      this.sessionKey,
+      'session_id',
+      'pubflow_session_id',
+      'pubflow_session',
+      'sessionId'
+    ]));
+  }
+
+  private getUserStorageKeys(): string[] {
+    return Array.from(new Set([
+      this.userKey,
+      'user_data',
+      'pubflow_user_data',
+      'user'
+    ]));
+  }
+
+  private async storeSessionId(sessionId: string): Promise<void> {
+    await this.storage.setItem(this.sessionKey, sessionId);
   }
 
   /**
@@ -78,13 +121,13 @@ export class AuthService {
 
         // Normalize snake_case → camelCase for 2FA fields returned by the backend.
         // Backend: { success:false, requires_2fa:true, session_id, available_methods, user }
-        if (data.requires_2fa) {
-          const partialSessionId = data.session_id ?? data.sessionId;
+        if (this.getRequiresTwoFactor(data)) {
+          const partialSessionId = this.getSessionIdFromResponse(data);
 
           // Store the partial session so ApiClient can attach it on
           // subsequent /auth/two_factor/:method/start and /verify calls.
           if (partialSessionId) {
-            await this.storage.setItem(this.sessionKey, partialSessionId);
+            await this.storeSessionId(partialSessionId);
           }
 
           // The 2FA login response already includes safe user data.
@@ -98,18 +141,22 @@ export class AuthService {
             success: true,
             requires2fa: true,
             sessionId: partialSessionId,
-            availableMethods: data.available_methods ?? data.availableMethods ?? [],
+            availableMethods: this.getAvailableTwoFactorMethods(data),
           };
         }
 
         // Normal (non-2FA) login — store session ID and user data
-        if (data.session_id ?? data.sessionId) {
-          await this.storage.setItem(this.sessionKey, data.session_id ?? data.sessionId);
+        const sessionId = this.getSessionIdFromResponse(data);
+        if (sessionId) {
+          await this.storeSessionId(sessionId);
         }
         if (data.user) {
           await this.storeUserData(data.user);
         }
-        return response.data;
+        return {
+          ...response.data,
+          sessionId: sessionId ?? response.data.sessionId,
+        };
       }
 
       if (DEBUG_AUTH) {
@@ -191,7 +238,7 @@ export class AuthService {
     }
 
     try {
-      const sessionId = await this.storage.getItem(this.sessionKey);
+      const sessionId = await this.getFirstStoredValue(this.getSessionStorageKeys());
 
       if (!sessionId) {
         if (DEBUG_AUTH) {
@@ -211,18 +258,22 @@ export class AuthService {
           console.log('AuthService.validateSession: Session is valid');
         }
 
+        const data = response.data as any;
+        const user = data.user;
+        const expiresAt = data.expiresAt ?? data.expires_at;
+
         // Update user data if provided and different from current
-        if (response.data.user) {
+        if (user) {
           const currentUser = await this.getCurrentUser();
-          if (!currentUser || JSON.stringify(currentUser) !== JSON.stringify(response.data.user)) {
-            await this.storeUserData(response.data.user);
+          if (!currentUser || JSON.stringify(currentUser) !== JSON.stringify(user)) {
+            await this.storeUserData(user);
           }
         }
 
         return {
           isValid: true,
-          expiresAt: response.data.expiresAt,
-          user: response.data.user
+          expiresAt,
+          user
         };
       }
 
@@ -262,8 +313,12 @@ export class AuthService {
     }
 
     try {
-      await this.storage.removeItem(this.sessionKey);
-      await this.storage.removeItem(this.userKey);
+      const keys = Array.from(new Set([
+        ...this.getSessionStorageKeys(),
+        ...this.getUserStorageKeys()
+      ]));
+
+      await Promise.all(keys.map(key => this.storage.removeItem(key)));
     } catch (error) {
       if (DEBUG_AUTH) {
         console.error('AuthService.clearSessionData: Error clearing session data:', error);
@@ -279,11 +334,12 @@ export class AuthService {
    */
   async getCurrentUser(): Promise<User | null> {
     try {
-      const userData = await this.storage.getItem(this.userKey);
+      const userData = await this.getFirstStoredValue(this.getUserStorageKeys());
       if (!userData) return null;
 
       // Parse and return user data preserving ALL original fields
       const parsedUser = JSON.parse(userData);
+      await this.storeUserData(parsedUser);
       return parsedUser;
     } catch (error) {
       console.error('Error getting current user:', error);
@@ -313,11 +369,13 @@ export class AuthService {
    */
   async getUserData(): Promise<User | null> {
     try {
-      const userData = await this.storage.getItem(this.userKey);
+      const userData = await this.getFirstStoredValue(this.getUserStorageKeys());
       if (!userData) return null;
 
       // Return the complete user object with all additional fields
-      return JSON.parse(userData) as User;
+      const parsedUser = JSON.parse(userData) as User;
+      await this.storeUserData(parsedUser);
+      return parsedUser;
     } catch (error) {
       console.error('Error getting user data:', error);
       return null;
@@ -335,15 +393,22 @@ export class AuthService {
       const response = await this.apiClient.post<SessionRefreshResult>(endpoint);
 
       if (response.success && response.data) {
+        const data = response.data as any;
+        const sessionId = this.getSessionIdFromResponse(data);
+
         // Update session ID if provided
-        if (response.data.sessionId) {
-          await this.storage.setItem(this.sessionKey, response.data.sessionId);
+        if (sessionId) {
+          await this.storeSessionId(sessionId);
         }
         // Update user data if provided
-        if (response.data.user) {
-          await this.storeUserData(response.data.user);
+        if (data.user) {
+          await this.storeUserData(data.user);
         }
-        return response.data;
+        return {
+          ...response.data,
+          sessionId: sessionId ?? response.data.sessionId,
+          expiresAt: data.expiresAt ?? data.expires_at,
+        };
       }
 
       return {

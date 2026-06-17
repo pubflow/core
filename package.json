@@ -1,6 +1,6 @@
 {
   "name": "@pubflow/core",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "description": "Core functionality for Pubflow framework",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -30,7 +30,7 @@
     "typescript": "^5.2.2"
   },
   "peerDependencies": {
-    "zod": "^3.x"
+    "zod": "^3.22.0 || ^4.0.0"
   },
   "directories": {
     "doc": "docs"
