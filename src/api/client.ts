@@ -122,8 +122,11 @@ export class ApiClient {
       if (response.ok) {
         return {
           success: true,
-          data,
+          data: data && typeof data === 'object' && 'data' in data ? data.data : data,
           status: response.status,
+          message: data?.message,
+          meta: data?.meta || data?.pagination,
+          userContext: data?.user_context,
         };
       }
 

@@ -80,6 +80,7 @@ For more details, see the [Core Concepts](./core-concepts.md) guide.
 ## Guides
 
 - [Multi-initialization](./guides/multi-initialization.md)
+- [Multi-backend Modules](./multi-backend-modules.md)
 - [Authentication Flow](./guides/authentication-flow.md)
 - [Advanced Search](./guides/advanced-search.md)
 - [Schema Validation](./guides/schema-validation.md)

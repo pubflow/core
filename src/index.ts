@@ -72,3 +72,6 @@ export { StorageAdapter } from './storage/adapter';
 // Export Bridge Payments
 export * from './payments';
 export { BridgePaymentClient } from './payments/client';
+
+// Export friendly multi-backend clients
+export * from './modules';

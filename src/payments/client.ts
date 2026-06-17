@@ -15,6 +15,7 @@ import {
   Payment,
   PaymentMethod,
   UpdatePaymentMethodRequest,
+  UpdateBillingAddressRequest,
   Address,
   CreateAddressRequest,
   UpdateAddressRequest,
@@ -23,6 +24,7 @@ import {
   UpdateCustomerRequest,
   Subscription,
   CreateSubscriptionRequest,
+  UpdateSubscriptionRequest,
   CancelSubscriptionRequest,
   Organization,
   CreateOrganizationRequest,
@@ -52,7 +54,11 @@ import {
   UpdateProductCostRequest,
   OrderCost,
   CreateOrderCostRequest,
-  TotalCostResponse
+  TotalCostResponse,
+  Product,
+  Receipt,
+  Invoice,
+  Order
 } from './types';
 
 /**
@@ -64,7 +70,9 @@ export class BridgePaymentClient {
   private apiClient: ApiClient;
   private guestToken?: string;
   private organizationId?: string;
+  private projectId?: string;
   private baseUrl: string;
+  private prefix: string;
 
   /**
    * Create a new Bridge Payment Client
@@ -75,6 +83,8 @@ export class BridgePaymentClient {
     this.baseUrl = config.baseUrl;
     this.guestToken = config.guestToken;
     this.organizationId = config.organizationId;
+    this.projectId = config.projectId;
+    this.prefix = config.prefix || '/bridge-payment';
 
     // Create API client with Pubflow configuration
     this.apiClient = new ApiClient(
@@ -124,20 +134,20 @@ export class BridgePaymentClient {
     // 2. Organization ID (if available) - Included in body
     // ⚠️ NOTE: Only works in Subscriptions and Customers currently
     // Addresses, Payments and Payment Methods have organization_id hardcoded to null in backend
-    if (body && (this.organizationId || options?.organizationId)) {
+    if (body && typeof body === 'object') {
       const orgId = options?.organizationId || this.organizationId;
-
-      // Only include organization_id in endpoints that support it
-      if (endpoint.includes('/subscriptions') || endpoint.includes('/customers')) {
+      const projectId = options?.projectId || this.projectId;
+      if (orgId && body.organization_id === undefined) {
         body.organization_id = orgId;
       }
-      // For other endpoints, backend ignores it (hardcoded null)
-      // When implemented in backend, it will work automatically
+      if (projectId && body.project_id === undefined) {
+        body.project_id = projectId;
+      }
     }
 
     // 3. ApiClient automatically handles X-Session-ID for authenticated users
     const response = await this.apiClient.request<T>(
-      `/bridge-payment${endpoint}`,
+      `${this.prefix}${endpoint}`,
       method,
       body,
       requestOptions
@@ -148,6 +158,25 @@ export class BridgePaymentClient {
     }
 
     return response.data!;
+  }
+
+  private withScopeParams(params?: PaginationParams, options?: PaymentRequestOptions): PaginationParams {
+    return {
+      ...params,
+      organization_id: params?.organization_id || options?.organizationId || this.organizationId,
+      project_id: params?.project_id || options?.projectId || this.projectId,
+    };
+  }
+
+  private buildQuery(params?: PaginationParams): string {
+    const queryParams = new URLSearchParams();
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.set(key, String(value));
+      }
+    });
+    const query = queryParams.toString();
+    return query ? `?${query}` : '';
   }
 
   // ============================================================================
@@ -267,6 +296,19 @@ export class BridgePaymentClient {
    */
   async deletePaymentMethod(id: string, options?: PaymentRequestOptions): Promise<void> {
     await this.request<void>(`/payment-methods/${id}`, 'DELETE', undefined, options);
+  }
+
+  async updatePaymentMethodBillingAddress(
+    id: string,
+    data: UpdateBillingAddressRequest,
+    options?: PaymentRequestOptions
+  ): Promise<PaymentMethod & { provider_synced?: boolean }> {
+    return this.request<PaymentMethod & { provider_synced?: boolean }>(
+      `/payment-methods/${id}/billing-address`,
+      'PATCH',
+      data,
+      options
+    );
   }
 
   // ============================================================================
@@ -479,6 +521,84 @@ export class BridgePaymentClient {
     options?: PaymentRequestOptions
   ): Promise<Subscription> {
     return this.request<Subscription>(`/subscriptions/${id}/cancel`, 'POST', data, options);
+  }
+
+  async updateSubscription(
+    id: string,
+    data: UpdateSubscriptionRequest,
+    options?: PaymentRequestOptions
+  ): Promise<Subscription & { provider_synced?: boolean }> {
+    return this.request<Subscription & { provider_synced?: boolean }>(
+      `/subscriptions/${id}`,
+      'PATCH',
+      data,
+      options
+    );
+  }
+
+  async updateSubscriptionBillingAddress(
+    id: string,
+    data: UpdateBillingAddressRequest,
+    options?: PaymentRequestOptions
+  ): Promise<Subscription & { provider_synced?: boolean }> {
+    return this.request<Subscription & { provider_synced?: boolean }>(
+      `/subscriptions/${id}/billing-address`,
+      'PATCH',
+      data,
+      options
+    );
+  }
+
+  async listProducts(params?: PaginationParams, options?: PaymentRequestOptions): Promise<Product[]> {
+    return this.request<Product[]>(
+      `/products${this.buildQuery(this.withScopeParams(params, options))}`,
+      'GET',
+      undefined,
+      options
+    );
+  }
+
+  async getProduct(id: string, options?: PaymentRequestOptions): Promise<Product> {
+    return this.request<Product>(`/products/${id}`, 'GET', undefined, options);
+  }
+
+  async listReceipts(params?: PaginationParams, options?: PaymentRequestOptions): Promise<Receipt[]> {
+    return this.request<Receipt[]>(
+      `/receipts${this.buildQuery(this.withScopeParams(params, options))}`,
+      'GET',
+      undefined,
+      options
+    );
+  }
+
+  async getReceipt(id: string, options?: PaymentRequestOptions): Promise<Receipt> {
+    return this.request<Receipt>(`/receipts/${id}`, 'GET', undefined, options);
+  }
+
+  async listInvoices(params?: PaginationParams, options?: PaymentRequestOptions): Promise<Invoice[]> {
+    return this.request<Invoice[]>(
+      `/invoices${this.buildQuery(this.withScopeParams(params, options))}`,
+      'GET',
+      undefined,
+      options
+    );
+  }
+
+  async getInvoice(id: string, options?: PaymentRequestOptions): Promise<Invoice> {
+    return this.request<Invoice>(`/invoices/${id}`, 'GET', undefined, options);
+  }
+
+  async listOrders(params?: PaginationParams, options?: PaymentRequestOptions): Promise<Order[]> {
+    return this.request<Order[]>(
+      `/orders${this.buildQuery(this.withScopeParams(params, options))}`,
+      'GET',
+      undefined,
+      options
+    );
+  }
+
+  async getOrder(id: string, options?: PaymentRequestOptions): Promise<Order> {
+    return this.request<Order>(`/orders/${id}`, 'GET', undefined, options);
   }
 
   // ============================================================================
@@ -1102,5 +1222,277 @@ export class BridgePaymentClient {
   ): Promise<OrderCost> {
     return this.request<OrderCost>('/cost-tracking/orders/costs', 'POST', data, options);
   }
-}
 
+  // ============================================================================
+  // DOCUMENTED ROUTE COVERAGE HELPERS
+  // ============================================================================
+
+  async updatePaymentIntent(id: string, data: Record<string, any>, options?: PaymentRequestOptions): Promise<PaymentIntent> {
+    return this.request<PaymentIntent>(`/payments/intents/${id}`, 'PATCH', data, options);
+  }
+
+  async confirmPaymentIntent(id: string, data?: Record<string, any>, options?: PaymentRequestOptions): Promise<PaymentIntent> {
+    return this.request<PaymentIntent>(`/payments/intents/${id}/confirm`, 'POST', data || {}, options);
+  }
+
+  async syncPaymentIntent(id: string, data?: Record<string, any>, options?: PaymentRequestOptions): Promise<PaymentIntent> {
+    return this.request<PaymentIntent>(`/payments/intents/${id}/sync`, 'POST', data || {}, options);
+  }
+
+  async cancelPayment(id: string, data?: Record<string, any>, options?: PaymentRequestOptions): Promise<Payment> {
+    return this.request<Payment>(`/payments/${id}/cancel`, 'POST', data || {}, options);
+  }
+
+  async capturePayment(id: string, data?: Record<string, any>, options?: PaymentRequestOptions): Promise<Payment> {
+    return this.request<Payment>(`/payments/${id}/capture`, 'POST', data || {}, options);
+  }
+
+  async createPaymentMethod(data: Record<string, any>, options?: PaymentRequestOptions): Promise<PaymentMethod> {
+    return this.request<PaymentMethod>('/payment-methods', 'POST', data, options);
+  }
+
+  async createPaymentMethodDirect(data: Record<string, any>, options?: PaymentRequestOptions): Promise<PaymentMethod> {
+    return this.request<PaymentMethod>('/payment-methods/direct', 'POST', data, options);
+  }
+
+  async listPaymentMethodsByCustomer(customerId: string, params?: PaginationParams, options?: PaymentRequestOptions): Promise<PaymentMethod[]> {
+    return this.request<PaymentMethod[]>(
+      `/payment-methods/customer/${customerId}${this.buildQuery(params)}`,
+      'GET',
+      undefined,
+      options
+    );
+  }
+
+  async createInvoice(data: Record<string, any>, options?: PaymentRequestOptions): Promise<Invoice> {
+    return this.request<Invoice>('/invoices', 'POST', data, options);
+  }
+
+  async createOrder(data: Record<string, any>, options?: PaymentRequestOptions): Promise<Order> {
+    return this.request<Order>('/orders', 'POST', data, options);
+  }
+
+  async listUserBalances(userId: string, params?: PaginationParams, options?: PaymentRequestOptions): Promise<AccountBalance[]> {
+    return this.request<AccountBalance[]>(
+      `/account-balance/users/${userId}/balances${this.buildQuery(params)}`,
+      'GET',
+      undefined,
+      options
+    );
+  }
+
+  async getMyBalanceTotal(params?: PaginationParams, options?: PaymentRequestOptions): Promise<any> {
+    return this.request<any>(`/account-balance/me/total${this.buildQuery(params)}`, 'GET', undefined, options);
+  }
+
+  async getUserBalanceTotal(userId: string, params?: PaginationParams, options?: PaymentRequestOptions): Promise<any> {
+    return this.request<any>(`/account-balance/users/${userId}/total${this.buildQuery(params)}`, 'GET', undefined, options);
+  }
+
+  async getBalanceStatistics(id: string, params?: PaginationParams, options?: PaymentRequestOptions): Promise<any> {
+    return this.request<any>(`/account-balance/${id}/statistics${this.buildQuery(params)}`, 'GET', undefined, options);
+  }
+
+  async listExpiringBalances(params?: PaginationParams, options?: PaymentRequestOptions): Promise<AccountBalance[]> {
+    return this.request<AccountBalance[]>(`/account-balance/expiring${this.buildQuery(params)}`, 'GET', undefined, options);
+  }
+
+  async listActiveSchedules(params?: PaginationParams, options?: PaymentRequestOptions): Promise<BillingSchedule[]> {
+    return this.request<BillingSchedule[]>(`/billing-schedules/active${this.buildQuery(params)}`, 'GET', undefined, options);
+  }
+
+  async listDueSchedules(params?: PaginationParams, options?: PaymentRequestOptions): Promise<BillingSchedule[]> {
+    return this.request<BillingSchedule[]>(`/billing-schedules/due${this.buildQuery(params)}`, 'GET', undefined, options);
+  }
+
+  async listUserSchedules(userId: string, params?: PaginationParams, options?: PaymentRequestOptions): Promise<BillingSchedule[]> {
+    return this.request<BillingSchedule[]>(
+      `/billing-schedules/users/${userId}${this.buildQuery(params)}`,
+      'GET',
+      undefined,
+      options
+    );
+  }
+
+  async cancelSchedule(id: string, data?: Record<string, any>, options?: PaymentRequestOptions): Promise<BillingSchedule> {
+    return this.request<BillingSchedule>(`/billing-schedules/${id}/cancel`, 'POST', data || {}, options);
+  }
+
+  async getScheduleStatistics(id: string, params?: PaginationParams, options?: PaymentRequestOptions): Promise<any> {
+    return this.request<any>(`/billing-schedules/${id}/statistics${this.buildQuery(params)}`, 'GET', undefined, options);
+  }
+
+  async listFailedScheduleExecutions(params?: PaginationParams, options?: PaymentRequestOptions): Promise<BillingExecution[]> {
+    return this.request<BillingExecution[]>(
+      `/billing-schedules/executions/failed${this.buildQuery(params)}`,
+      'GET',
+      undefined,
+      options
+    );
+  }
+
+  async closeProductCost(id: string, data?: Record<string, any>, options?: PaymentRequestOptions): Promise<ProductCost> {
+    return this.request<ProductCost>(`/cost-tracking/products/costs/${id}/close`, 'POST', data || {}, options);
+  }
+
+  async getOrderCost(orderId: string, params?: PaginationParams, options?: PaymentRequestOptions): Promise<any> {
+    return this.request<any>(`/cost-tracking/orders/${orderId}/cost${this.buildQuery(params)}`, 'GET', undefined, options);
+  }
+
+  async getSubscriptionCost(subscriptionId: string, params?: PaginationParams, options?: PaymentRequestOptions): Promise<any> {
+    return this.request<any>(`/cost-tracking/subscriptions/${subscriptionId}/cost${this.buildQuery(params)}`, 'GET', undefined, options);
+  }
+
+  async getProfitability(params?: PaginationParams, options?: PaymentRequestOptions): Promise<any> {
+    return this.request<any>(`/cost-tracking/analytics/profitability${this.buildQuery(params)}`, 'GET', undefined, options);
+  }
+
+  async getLowMargins(params?: PaginationParams, options?: PaymentRequestOptions): Promise<any> {
+    return this.request<any>(`/cost-tracking/analytics/low-margins${this.buildQuery(params)}`, 'GET', undefined, options);
+  }
+
+  async getLosses(params?: PaginationParams, options?: PaymentRequestOptions): Promise<any> {
+    return this.request<any>(`/cost-tracking/analytics/losses${this.buildQuery(params)}`, 'GET', undefined, options);
+  }
+
+  async getTopProfitable(params?: PaginationParams, options?: PaymentRequestOptions): Promise<any> {
+    return this.request<any>(`/cost-tracking/analytics/top-profitable${this.buildQuery(params)}`, 'GET', undefined, options);
+  }
+
+  async previewGuest(email: string, options?: PaymentRequestOptions): Promise<any> {
+    return this.request<any>(`/guest-conversion/preview-guest/${encodeURIComponent(email)}`, 'GET', undefined, options);
+  }
+
+  async getMyGuestData(options?: PaymentRequestOptions): Promise<any> {
+    return this.request<any>('/guest-conversion/my-guest-data', 'GET', undefined, options);
+  }
+
+  admin = {
+    overview: (options?: PaymentRequestOptions) => this.request<any>('/admin/overview', 'GET', undefined, options),
+    stats: (params?: PaginationParams, options?: PaymentRequestOptions) =>
+      this.request<any>(`/admin/stats${this.buildQuery(params)}`, 'GET', undefined, options),
+    payments: (params?: PaginationParams, options?: PaymentRequestOptions) =>
+      this.request<any>(`/admin/payments${this.buildQuery(params)}`, 'GET', undefined, options),
+    cache: (options?: PaymentRequestOptions) => this.request<any>('/admin/cache', 'GET', undefined, options),
+    clearCache: (data?: Record<string, any>, options?: PaymentRequestOptions) => this.request<any>('/admin/cache', 'DELETE', data, options),
+    health: (options?: PaymentRequestOptions) => this.request<any>('/admin/health', 'GET', undefined, options),
+    testNotification: (data?: Record<string, any>, options?: PaymentRequestOptions) =>
+      this.request<any>('/admin/test-notification', 'POST', data || {}, options),
+    notificationConfig: (options?: PaymentRequestOptions) => this.request<any>('/admin/notification-config', 'GET', undefined, options),
+    updateNotificationConfig: (data: Record<string, any>, options?: PaymentRequestOptions) =>
+      this.request<any>('/admin/notification-config', 'PUT', data, options),
+    products: (params?: PaginationParams, options?: PaymentRequestOptions) =>
+      this.request<any>(`/admin/products${this.buildQuery(params)}`, 'GET', undefined, options),
+    syncProducts: (data?: Record<string, any>, options?: PaymentRequestOptions) =>
+      this.request<any>('/admin/products/sync', 'POST', data || {}, options),
+    subscriptions: (params?: PaginationParams, options?: PaymentRequestOptions) =>
+      this.request<any>(`/admin/subscriptions${this.buildQuery(params)}`, 'GET', undefined, options),
+    memberships: (params?: PaginationParams, options?: PaymentRequestOptions) =>
+      this.request<any>(`/admin/memberships${this.buildQuery(params)}`, 'GET', undefined, options),
+    applePayDomains: (params?: PaginationParams, options?: PaymentRequestOptions) =>
+      this.request<any>(`/admin/apple-pay-domains${this.buildQuery(params)}`, 'GET', undefined, options),
+    addApplePayDomain: (data: Record<string, any>, options?: PaymentRequestOptions) =>
+      this.request<any>('/admin/apple-pay-domains', 'POST', data, options),
+    deleteApplePayDomain: (domain: string, options?: PaymentRequestOptions) =>
+      this.request<any>(`/admin/apple-pay-domains/${encodeURIComponent(domain)}`, 'DELETE', undefined, options),
+  };
+
+  webhooks = {
+    list: (params?: PaginationParams, options?: PaymentRequestOptions) => this.request<any>(`/webhooks${this.buildQuery(params)}`, 'GET', undefined, options),
+    create: (data: Record<string, any>, options?: PaymentRequestOptions) => this.request<any>('/webhooks', 'POST', data, options),
+    get: (id: string, options?: PaymentRequestOptions) => this.request<any>(`/webhooks/${id}`, 'GET', undefined, options),
+    update: (id: string, data: Record<string, any>, options?: PaymentRequestOptions) => this.request<any>(`/webhooks/${id}`, 'PUT', data, options),
+    delete: (id: string, options?: PaymentRequestOptions) => this.request<any>(`/webhooks/${id}`, 'DELETE', undefined, options),
+    test: (id: string, data?: Record<string, any>, options?: PaymentRequestOptions) => this.request<any>(`/webhooks/${id}/test`, 'POST', data || {}, options),
+    deliveries: (id: string, params?: PaginationParams, options?: PaymentRequestOptions) =>
+      this.request<any>(`/webhooks/${id}/deliveries${this.buildQuery(params)}`, 'GET', undefined, options),
+  };
+
+  externalWebhooks = {
+    receive: (provider: string, data: Record<string, any>, options?: PaymentRequestOptions) =>
+      this.request<any>(`/external-webhooks/${provider}`, 'POST', data, options),
+    stripe: (data: Record<string, any>, options?: PaymentRequestOptions) => this.request<any>('/external-webhooks/stripe', 'POST', data, options),
+    paypal: (data: Record<string, any>, options?: PaymentRequestOptions) => this.request<any>('/external-webhooks/paypal', 'POST', data, options),
+    polar: (data: Record<string, any>, options?: PaymentRequestOptions) => this.request<any>('/external-webhooks/polar', 'POST', data, options),
+    azul: (data: Record<string, any>, options?: PaymentRequestOptions) => this.request<any>('/external-webhooks/azul', 'POST', data, options),
+  };
+
+  memberships = {
+    tiers: (params?: PaginationParams, options?: PaymentRequestOptions) => this.request<any>(`/memberships/tiers${this.buildQuery(params)}`, 'GET', undefined, options),
+    mine: (params?: PaginationParams, options?: PaymentRequestOptions) => this.request<any>(`/memberships/me${this.buildQuery(params)}`, 'GET', undefined, options),
+    list: (params?: PaginationParams, options?: PaymentRequestOptions) => this.request<any>(`/memberships${this.buildQuery(params)}`, 'GET', undefined, options),
+    get: (id: string, options?: PaymentRequestOptions) => this.request<any>(`/memberships/${id}`, 'GET', undefined, options),
+    cancel: (id: string, data?: Record<string, any>, options?: PaymentRequestOptions) => this.request<any>(`/memberships/${id}/cancel`, 'POST', data || {}, options),
+    user: (userId: string, params?: PaginationParams, options?: PaymentRequestOptions) =>
+      this.request<any>(`/memberships/users/${userId}${this.buildQuery(params)}`, 'GET', undefined, options),
+    access: (data: Record<string, any>, options?: PaymentRequestOptions) => this.request<any>('/memberships/access', 'POST', data, options),
+    projects: (params?: PaginationParams, options?: PaymentRequestOptions) =>
+      this.request<any>(`/memberships/projects${this.buildQuery(params)}`, 'GET', undefined, options),
+  };
+
+  projects = {
+    list: (params?: PaginationParams, options?: PaymentRequestOptions) => this.request<any>(`/projects${this.buildQuery(params)}`, 'GET', undefined, options),
+    create: (data: Record<string, any>, options?: PaymentRequestOptions) => this.request<any>('/projects', 'POST', data, options),
+    get: (id: string, options?: PaymentRequestOptions) => this.request<any>(`/projects/${id}`, 'GET', undefined, options),
+    update: (id: string, data: Record<string, any>, options?: PaymentRequestOptions) => this.request<any>(`/projects/${id}`, 'PUT', data, options),
+    delete: (id: string, options?: PaymentRequestOptions) => this.request<any>(`/projects/${id}`, 'DELETE', undefined, options),
+    invites: (projectId: string, params?: PaginationParams, options?: PaymentRequestOptions) =>
+      this.request<any>(`/projects/${projectId}/invites${this.buildQuery(params)}`, 'GET', undefined, options),
+    invite: (projectId: string, data: Record<string, any>, options?: PaymentRequestOptions) =>
+      this.request<any>(`/projects/${projectId}/invites`, 'POST', data, options),
+    acceptInvite: (token: string, data?: Record<string, any>, options?: PaymentRequestOptions) =>
+      this.request<any>(`/projects/invites/${token}/accept`, 'POST', data || {}, options),
+  };
+
+  moduleHub = {
+    plugins: (params?: PaginationParams, options?: PaymentRequestOptions) => this.request<any>(`/module-hub/plugins${this.buildQuery(params)}`, 'GET', undefined, options),
+    plugin: (id: string, options?: PaymentRequestOptions) => this.request<any>(`/module-hub/plugins/${id}`, 'GET', undefined, options),
+    install: (id: string, data?: Record<string, any>, options?: PaymentRequestOptions) =>
+      this.request<any>(`/module-hub/plugins/${id}/install`, 'POST', data || {}, options),
+    uninstall: (id: string, data?: Record<string, any>, options?: PaymentRequestOptions) =>
+      this.request<any>(`/module-hub/plugins/${id}/uninstall`, 'POST', data || {}, options),
+  };
+
+  renewals = {
+    list: (params?: PaginationParams, options?: PaymentRequestOptions) => this.request<any>(`/renewals${this.buildQuery(params)}`, 'GET', undefined, options),
+    get: (id: string, options?: PaymentRequestOptions) => this.request<any>(`/renewals/${id}`, 'GET', undefined, options),
+    run: (id: string, data?: Record<string, any>, options?: PaymentRequestOptions) => this.request<any>(`/renewals/${id}/run`, 'POST', data || {}, options),
+  };
+
+  hosted = {
+    meUrl: () => `${this.baseUrl.replace(/\/+$/, '')}${this.prefix}/pages/me`,
+    payUrl: (params?: PaginationParams) => `${this.baseUrl.replace(/\/+$/, '')}${this.prefix}/pages/pay${this.buildQuery(params)}`,
+    loginUrl: (params?: PaginationParams) => `${this.baseUrl.replace(/\/+$/, '')}${this.prefix}/pages/login${this.buildQuery(params)}`,
+    portalUrl: (params?: PaginationParams) => `${this.baseUrl.replace(/\/+$/, '')}${this.prefix}/pages/portal${this.buildQuery(params)}`,
+    subscriptionsUrl: (params?: PaginationParams) => `${this.baseUrl.replace(/\/+$/, '')}${this.prefix}/pages/subscriptions${this.buildQuery(params)}`,
+    paymentMethodsUrl: (params?: PaginationParams) => `${this.baseUrl.replace(/\/+$/, '')}${this.prefix}/pages/payment-methods${this.buildQuery(params)}`,
+    addressesUrl: (params?: PaginationParams) => `${this.baseUrl.replace(/\/+$/, '')}${this.prefix}/pages/addresses${this.buildQuery(params)}`,
+    invoicesUrl: (params?: PaginationParams) => `${this.baseUrl.replace(/\/+$/, '')}${this.prefix}/pages/invoices${this.buildQuery(params)}`,
+    embedPayUrl: (params?: PaginationParams) => `${this.baseUrl.replace(/\/+$/, '')}${this.prefix}/embed/pay${this.buildQuery(params)}`,
+    embedLoginUrl: (params?: PaginationParams) => `${this.baseUrl.replace(/\/+$/, '')}${this.prefix}/embed/login${this.buildQuery(params)}`,
+    embedPortalUrl: (params?: PaginationParams) => `${this.baseUrl.replace(/\/+$/, '')}${this.prefix}/embed/portal${this.buildQuery(params)}`,
+    embedSubscriptionsUrl: (params?: PaginationParams) => `${this.baseUrl.replace(/\/+$/, '')}${this.prefix}/embed/subscriptions${this.buildQuery(params)}`,
+    embedPaymentMethodsUrl: (params?: PaginationParams) => `${this.baseUrl.replace(/\/+$/, '')}${this.prefix}/embed/payment-methods${this.buildQuery(params)}`,
+    embedButtonUrl: (params?: PaginationParams) => `${this.baseUrl.replace(/\/+$/, '')}${this.prefix}/embed/button${this.buildQuery(params)}`,
+    embedPaymentsUrl: (params?: PaginationParams) => `${this.baseUrl.replace(/\/+$/, '')}${this.prefix}/embed/payments${this.buildQuery(params)}`,
+  };
+
+  callbacks = {
+    azulApproved: (params?: PaginationParams, options?: PaymentRequestOptions) => this.request<any>(`/callbacks/azul/approved${this.buildQuery(params)}`, 'GET', undefined, options),
+    azulDeclined: (params?: PaginationParams, options?: PaymentRequestOptions) => this.request<any>(`/callbacks/azul/declined${this.buildQuery(params)}`, 'GET', undefined, options),
+    azulCancelled: (params?: PaginationParams, options?: PaymentRequestOptions) => this.request<any>(`/callbacks/azul/cancelled${this.buildQuery(params)}`, 'GET', undefined, options),
+    polarReturn: (params?: PaginationParams, options?: PaymentRequestOptions) => this.request<any>(`/callbacks/polar/return${this.buildQuery(params)}`, 'GET', undefined, options),
+    health: (options?: PaymentRequestOptions) => this.request<any>('/callbacks/health', 'GET', undefined, options),
+  };
+
+  health = {
+    basic: (options?: PaymentRequestOptions) => this.request<any>('/health', 'GET', undefined, options),
+    detailed: (options?: PaymentRequestOptions) => this.request<any>('/health/detailed', 'GET', undefined, options),
+    database: (options?: PaymentRequestOptions) => this.request<any>('/health/database', 'GET', undefined, options),
+    providers: (options?: PaymentRequestOptions) => this.request<any>('/health/providers', 'GET', undefined, options),
+    flowless: (options?: PaymentRequestOptions) => this.request<any>('/health/flowless', 'GET', undefined, options),
+    ready: (options?: PaymentRequestOptions) => this.request<any>('/health/ready', 'GET', undefined, options),
+    live: (options?: PaymentRequestOptions) => this.request<any>('/health/live', 'GET', undefined, options),
+    metrics: (options?: PaymentRequestOptions) => this.request<any>('/health/metrics', 'GET', undefined, options),
+  };
+}

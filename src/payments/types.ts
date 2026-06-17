@@ -17,6 +17,12 @@ export interface BridgePaymentConfig {
   baseUrl: string;
 
   /**
+   * API mount prefix.
+   * @default '/bridge-payment'
+   */
+  prefix?: string;
+
+  /**
    * Guest token (optional)
    * If provided, all requests will use X-Guest-Token header
    */
@@ -37,6 +43,11 @@ export interface BridgePaymentConfig {
    * The client is prepared for when the backend is updated.
    */
   organizationId?: string;
+
+  /**
+   * Project ID for project-scoped billing.
+   */
+  projectId?: string;
 
   /**
    * Pubflow instance ID (optional)
@@ -70,6 +81,11 @@ export interface PaymentRequestOptions extends RequestOptions {
    * Overrides the client's organizationId
    */
   organizationId?: string;
+
+  /**
+   * Project ID for this specific request.
+   */
+  projectId?: string;
 }
 
 // ============================================================================
@@ -107,6 +123,9 @@ export interface CreatePaymentIntentRequest {
   // Payment method
   payment_method_id?: string;
   save_payment_method?: boolean;
+  organization_id?: string;
+  project_id?: string;
+  billing_address_id?: string | null;
 
   // Metadata
   metadata?: Record<string, any>;
@@ -143,6 +162,12 @@ export interface Payment {
   status: string;
   description?: string;
   metadata?: Record<string, any>;
+  organization_id?: string;
+  project_id?: string;
+  payment_method?: PaymentMethod;
+  subscription?: Subscription;
+  product?: Product;
+  order?: Order;
   created_at: string;
   updated_at: string;
 }
@@ -167,11 +192,15 @@ export interface PaymentMethod {
   provider_id: string;
   provider_payment_method_id: string;
   type: PaymentMethodType;
+  payment_type?: PaymentMethodType;
   last4?: string;
+  last_four?: string;
   brand?: string;
+  card_brand?: string;
   exp_month?: number;
   exp_year?: number;
   alias?: string;
+  billing_address_id?: string | null;
   is_default: boolean;
   created_at: string;
   updated_at: string;
@@ -183,6 +212,10 @@ export interface PaymentMethod {
 export interface UpdatePaymentMethodRequest {
   alias?: string;
   is_default?: boolean;
+}
+
+export interface UpdateBillingAddressRequest {
+  billing_address_id: string | null;
 }
 
 // ============================================================================
@@ -212,6 +245,11 @@ export interface Address {
   country: string;
   phone?: string;
   email?: string;
+  is_partial?: boolean;
+  is_business?: boolean;
+  business_name?: string | null;
+  tax_id?: string | null;
+  tax_id_type?: string | null;
   is_default: boolean;
   created_at: string;
   updated_at: string;
@@ -231,6 +269,11 @@ export interface CreateAddressRequest {
   country: string;
   phone?: string;
   email?: string;
+  is_partial?: boolean;
+  is_business?: boolean;
+  business_name?: string | null;
+  tax_id?: string | null;
+  tax_id_type?: string | null;
   is_default?: boolean;
 }
 
@@ -248,6 +291,11 @@ export interface UpdateAddressRequest {
   country?: string;
   phone?: string;
   is_default?: boolean;
+  is_partial?: boolean;
+  is_business?: boolean;
+  business_name?: string | null;
+  tax_id?: string | null;
+  tax_id_type?: string | null;
 }
 
 // ============================================================================
@@ -332,6 +380,15 @@ export interface CreateSubscriptionRequest {
   payment_method_id: string;
   provider_id?: string;
   trial_days?: number;
+  organization_id?: string;
+  project_id?: string;
+  billing_address_id?: string | null;
+  metadata?: Record<string, any>;
+}
+
+export interface UpdateSubscriptionRequest {
+  payment_method_id?: string;
+  billing_address_id?: string | null;
   metadata?: Record<string, any>;
 }
 
@@ -450,6 +507,12 @@ export interface ConvertGuestToUserResponse {
 export interface PaginationParams {
   page?: number;
   limit?: number;
+  organization_id?: string;
+  project_id?: string;
+  include?: string;
+  include_pm?: boolean;
+  completeness?: 'full' | 'partial' | 'any';
+  [key: string]: any;
 }
 
 /**
@@ -765,3 +828,41 @@ export interface TotalCostResponse {
   calculated_at?: string;
 }
 
+export interface Product {
+  id: string;
+  name?: string;
+  description?: string;
+  product_type?: string;
+  category_id?: string;
+  is_recurring?: boolean;
+  metadata?: Record<string, any>;
+  [key: string]: any;
+}
+
+export interface Order {
+  id: string;
+  user_id?: string;
+  organization_id?: string;
+  project_id?: string;
+  status?: string;
+  metadata?: Record<string, any>;
+  [key: string]: any;
+}
+
+export interface Receipt {
+  id: string;
+  payment_id?: string;
+  user_id?: string;
+  organization_id?: string;
+  project_id?: string;
+  [key: string]: any;
+}
+
+export interface Invoice {
+  id: string;
+  user_id?: string;
+  organization_id?: string;
+  project_id?: string;
+  status?: string;
+  [key: string]: any;
+}

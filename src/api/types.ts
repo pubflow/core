@@ -43,6 +43,16 @@ export interface RequestOptions {
   onError?: (error: any) => void;
 }
 
+export interface UserContext {
+  authenticated: boolean;
+  provider?: string;
+  user_id?: string;
+  user_type?: string;
+  user_email?: string;
+  name?: string;
+  [key: string]: any;
+}
+
 /**
  * Generic API response
  */
@@ -71,6 +81,16 @@ export interface ApiResponse<T = any> {
    * Additional message (can be present in both success and error cases)
    */
   message?: string;
+
+  /**
+   * Response metadata from modern Flowless/Pubflow envelopes.
+   */
+  meta?: Record<string, any>;
+
+  /**
+   * Viewer/session context from modern Flowless/Pubflow envelopes.
+   */
+  userContext?: UserContext;
 }
 
 /**

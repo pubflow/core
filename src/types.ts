@@ -221,6 +221,33 @@ export interface PubflowInstanceConfig {
   baseUrl: string;
 
   /**
+   * Base URL for the main Flowless API. Defaults to baseUrl.
+   */
+  apiUrl?: string;
+
+  /**
+   * Base URL for Bridge Payments. Defaults to apiUrl/baseUrl.
+   */
+  paymentsUrl?: string;
+
+  /**
+   * Base URL for Ultra Forms. Defaults to apiUrl/baseUrl.
+   */
+  formsUrl?: string;
+
+  /**
+   * Base URL for Blog/Onboarding if those modules are hosted separately.
+   * Defaults to apiUrl/baseUrl.
+   */
+  flowlessUrl?: string;
+
+  /**
+   * Route prefixes for mounted modules. These are paths on each module host,
+   * not full URLs.
+   */
+  modulePrefixes?: ModulePrefixes;
+
+  /**
    * Base path for authentication endpoints
    */
   authBasePath?: string;
@@ -249,6 +276,35 @@ export interface PubflowInstanceConfig {
    * Request timeout in milliseconds
    */
   timeout?: number;
+}
+
+/**
+ * Route prefixes for Pubflow-friendly module clients.
+ */
+export interface ModulePrefixes {
+  /**
+   * Bridge Payments mount path.
+   * @default '/bridge-payment'
+   */
+  payments?: string;
+
+  /**
+   * Ultra Forms API mount path.
+   * @default '/api/v1'
+   */
+  forms?: string;
+
+  /**
+   * Flowless blog posts mount path.
+   * @default '/api/v1/posts'
+   */
+  blog?: string;
+
+  /**
+   * Flowless onboarding mount path.
+   * @default '/api/v1/onboarding'
+   */
+  onboarding?: string;
 }
 
 /**

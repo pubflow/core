@@ -20,6 +20,16 @@ const defaultSessionConfig: SessionConfig = {
 const defaultConfig: PubflowInstanceConfig = {
   id: 'default',
   baseUrl: 'http://localhost:3000',
+  apiUrl: 'http://localhost:3000',
+  paymentsUrl: 'http://localhost:3000',
+  formsUrl: 'http://localhost:3000',
+  flowlessUrl: 'http://localhost:3000',
+  modulePrefixes: {
+    payments: '/bridge-payment',
+    forms: '/api/v1',
+    blog: '/api/v1/posts',
+    onboarding: '/api/v1/onboarding'
+  },
   authBasePath: '/auth',
   sessionConfig: defaultSessionConfig,
   storageConfig: {
@@ -36,10 +46,20 @@ const defaultConfig: PubflowInstanceConfig = {
 
 export const createConfig = (config: Partial<PubflowInstanceConfig> = {}): PubflowInstanceConfig => {
   const existingConfig = { ...defaultConfig };
+  const apiUrl = config.apiUrl || config.flowlessUrl || config.baseUrl || existingConfig.apiUrl || existingConfig.baseUrl;
   
   return {
     ...existingConfig,
     ...config,
+    apiUrl,
+    baseUrl: config.baseUrl || apiUrl,
+    paymentsUrl: config.paymentsUrl || apiUrl,
+    formsUrl: config.formsUrl || apiUrl,
+    flowlessUrl: config.flowlessUrl || apiUrl,
+    modulePrefixes: {
+      ...existingConfig.modulePrefixes,
+      ...config.modulePrefixes
+    },
     sessionConfig: {
       ...existingConfig.sessionConfig,
       ...config.sessionConfig
@@ -69,11 +89,22 @@ const DEFAULT_INSTANCE_ID = 'default';
  * @returns The complete configuration
  */
 export function initConfig(config: PubflowInstanceConfig, instanceId: string = DEFAULT_INSTANCE_ID): PubflowInstanceConfig {
+  const apiUrl = config.apiUrl || config.flowlessUrl || config.baseUrl || defaultConfig.apiUrl || defaultConfig.baseUrl;
+
   // Merge with default config
   const fullConfig: PubflowInstanceConfig = {
     ...defaultConfig,
     ...config,
     id: instanceId,
+    apiUrl,
+    baseUrl: config.baseUrl || apiUrl,
+    paymentsUrl: config.paymentsUrl || apiUrl,
+    formsUrl: config.formsUrl || apiUrl,
+    flowlessUrl: config.flowlessUrl || apiUrl,
+    modulePrefixes: {
+      ...defaultConfig.modulePrefixes,
+      ...config.modulePrefixes
+    },
     // Merge nested objects
     sessionConfig: {
       ...defaultConfig.sessionConfig,
@@ -151,12 +182,22 @@ export function removeConfig(instanceId: string): boolean {
  */
 export function updateConfig(instanceId: string, config: Partial<PubflowInstanceConfig>): PubflowInstanceConfig {
   const existingConfig = getConfig(instanceId);
+  const apiUrl = config.apiUrl || config.flowlessUrl || config.baseUrl || existingConfig.apiUrl || existingConfig.baseUrl;
 
   // Merge with existing config
   const updatedConfig: PubflowInstanceConfig = {
     ...existingConfig,
     ...config,
     id: instanceId,
+    apiUrl,
+    baseUrl: config.baseUrl || existingConfig.baseUrl || apiUrl,
+    paymentsUrl: config.paymentsUrl || existingConfig.paymentsUrl || apiUrl,
+    formsUrl: config.formsUrl || existingConfig.formsUrl || apiUrl,
+    flowlessUrl: config.flowlessUrl || existingConfig.flowlessUrl || apiUrl,
+    modulePrefixes: {
+      ...existingConfig.modulePrefixes,
+      ...config.modulePrefixes
+    },
     // Merge nested objects
     sessionConfig: {
       ...existingConfig.sessionConfig,
